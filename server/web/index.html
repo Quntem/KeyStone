@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Directory Server</title>
+</head>
+<body>
+    <h1>Directory Server</h1>
+    <p>Welcome to the directory server</p>
+    <div id="user">
+        <p id="username"></p>
+        <p id="loginname"></p>
+        <p id="name"></p>
+        <p id="email"></p>
+        <p id="role"></p>
+        <p id="tenant"></p>
+        <p id="manager"></p>
+    </div>
+    <hr>
+    <div id="sessions">
+        
+    </div>
+    <button onclick="logout()">Logout</button>
+    <script>
+        function logout() {
+            fetch("/session/" + document.cookie.split("sessionId=")[1], {
+                method: "DELETE"
+            }).then(() => {
+                document.cookie = "sessionId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                window.location.href = "/signin";
+            });
+        }
+        async function revokeSession(token) {
+            await fetch("/session/" + token, {
+                method: "DELETE"
+            })
+        }
+    </script>
+    <script>
+        fetch("/me").then(response => response.json()).then(data => {
+            document.getElementById("username").innerHTML = "Username: " + data.username;
+            document.getElementById("loginname").innerHTML = "Login Name: " + data.tenant.name + "/" + (data.path != "/" ? data.path + data.username : data.username);
+            document.getElementById("name").innerHTML = "Name: " + data.name;
+            document.getElementById("email").innerHTML = "Email: " + data.email;
+            document.getElementById("role").innerHTML = "Role: " + data.role;
+            document.getElementById("tenant").innerHTML = "Tenant: " + data.tenant.name;
+            document.getElementById("manager").innerHTML = "Manager: " + (data.manager?.username ? (data.manager.tenant.name + "/" + (data.path != "/" ? data.path + data.manager.username : data.manager.username)) : "None");
+        });
+        function reloadSessions() {
+            fetch("/sessions").then(response => response.json()).then(data => {
+                data.forEach(session => {
+                    if (session.id == document.cookie.split("sessionId=")[1]) {
+                        document.getElementById("sessions").innerHTML += "Session ID: " + session.id + " (Current Session)<br>" + "Created At: " + session.createdAt + "<br>" + "Expires At: " + session.expiresAt + "<br><hr>";
+                    } else {
+                        document.getElementById("sessions").innerHTML += "Session ID: " + session.id + "<br>" + "Created At: " + session.createdAt + "<br>" + "Expires At: " + session.expiresAt + `<br> <button onclick="revokeSession('` + session.id + `').then(() => {document.getElementById('sessions').innerHTML = ''; reloadSessions()})">Revoke</button> <br><hr>`;
+                    }
+                });
+            });
+        }
+        reloadSessions();
+    </script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="jquery.js"></script>
+</head>
+<body>
+    <header>
+        <div class="headertitle">OpenDirectory Admin Center</div>
+        <div class="headeruser">
+            <p id="loginname"></p>
+            <button onclick="logout()" class="logoutButton">Logout</button>
+        </div>
+    </header>
+    <div id="content">
+        <div id="sidebar">
+            <div id="users"></div>
+            <hr>
+            <div id="actions">
+                <button onclick="createUser()">Create User</button>
+            </div>
+        </div>
+        <div id="main">
+            
+        </div>
+    </div>
+    <script>
+        function logout() {
+            fetch("/session/" + document.cookie.split("sessionId=")[1], {
+                method: "DELETE"
+            }).then(() => {
+                document.cookie = "sessionId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                window.location.href = "/signin";
+            });
+        }
+        function getUsers() {
+            fetch("/admin/api/users").then(response => response.json()).then(async data => {
+                var me = await fetch("/me")
+                me = await me.json();
+                console.log(data);
+                document.getElementById("users").innerHTML = "";
+                data.forEach(user => {
+                    if (user.id == me.id) {
+                        document.getElementById("users").innerHTML += `<p class="sidebar-item-user" onclick="userClick('` + user.id + `')">` + user.tenant.name + "/" + (user.path != "/" ? user.path + user.username : user.username) + " (Current User)</p>";
+                    } else {
+                        document.getElementById("users").innerHTML += `<p class="sidebar-item-user" onclick="userClick('` + user.id + `')">` + user.tenant.name + "/" + (user.path != "/" ? user.path + user.username : user.username) + "</p>";
+                    }
+                });
+            });
+        }
+        getUsers();
+        fetch("/me").then(response => response.json()).then(data => {
+            document.getElementById("loginname").innerHTML = "Logged in as: " + data.tenant.name + "/" + (data.path != "/" ? data.path + data.username : data.username);
+        });
+        var userClick = async function(id) {
+            console.log(id);
+            var data = await fetch("/admin/api/user/" + id).then(response => response.json());
+            $("#main").load("pages/user.html");
+            setTimeout(() => {
+                document.getElementById("user-detail-name").innerHTML = data.name;
+                document.getElementById("user-detail-username").innerHTML = data.tenant.name + "/" + (data.path != "/" ? data.path + data.username : data.username);
+                document.getElementById("user-detail-email").innerHTML = "Email: " + data.email;
+                document.getElementById("user-detail-role").innerHTML = "Role: " + data.role;
+                document.getElementById("user-detail-tenant").innerHTML = "Tenant: " + data.tenant.name;
+                document.getElementById("user-detail-manager").innerHTML = "Manager: " + (data.manager?.tenant.name + "/" + (data.manager?.path != "/" ? data.manager?.path + data.manager?.username : data.manager?.username));
+            }, 100);
+        }
+    </script>
+</body>
+</html>
