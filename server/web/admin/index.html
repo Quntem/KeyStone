@@ -68,6 +68,9 @@
                 document.getElementById("user-detail-manager").innerHTML = "Manager: " + (data.manager?.tenant.name + "/" + (data.manager?.path != "/" ? data.manager?.path + data.manager?.username : data.manager?.username));
             }, 100);
         }
+        function createUser() {
+            $("#main").load("pages/createuser.html");
+        }
     </script>
 </body>
 </html>

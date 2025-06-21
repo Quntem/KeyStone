@@ -189,3 +189,14 @@ export async function listTenantUsers({tenantId}: {tenantId: string}) {
         },
     });
 }
+
+export async function getTenantById({id}: {id: string}) {
+    return await prisma.tenant.findUnique({
+        where: {
+            id,
+        },
+        include: {
+            tenantChildren: true,
+        },
+    });
+}

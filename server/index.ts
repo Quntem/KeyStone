@@ -1,5 +1,5 @@
 import express from "express";
-import { getUserIdByUsername, createSession, getTenantByName, getSession, getUserById, listSessions, deleteSession, listTenantUsers } from "../functions.ts";
+import { getUserIdByUsername, createSession, getTenantByName, getSession, getUserById, listSessions, deleteSession, listTenantUsers, createUser, getTenantById } from "../functions.ts";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
 
@@ -147,4 +147,42 @@ app.get("/admin/ui/*path", async (req, res) => {
 
 app.listen(3000, () => {
     console.log("Server started on port 3000");
+});
+
+app.post("/admin/api/user", bodyParser.urlencoded({ extended: true }), async (req, res) => {
+    if (!req.cookies?.sessionId) {
+        res.redirect("/signin");
+        return;
+    }
+    var session = await getSession({sessionId: req.cookies.sessionId});
+    if (!session) {
+        res.redirect("/signin");
+        return;
+    }
+    var user = await getUserById({id: session.userId});
+    if (!user || user.role != "ADMIN") {
+        res.redirect("/");
+        return;
+    }
+    await createUser({email: req.body.email, password: req.body.password, name: req.body.name, tenantId: req.body.tenant, username: req.body.username});
+    res.redirect("/admin/ui/index.html");
+});
+
+app.get("/admin/api/me/tenant", async (req, res) => {
+    if (!req.cookies?.sessionId) {
+        res.redirect("/signin");
+        return;
+    }
+    var session = await getSession({sessionId: req.cookies.sessionId});
+    if (!session) {
+        res.redirect("/signin");
+        return;
+    }
+    var user = await getUserById({id: session.userId});
+    if (!user || user.role != "ADMIN") {
+        res.redirect("/");
+        return;
+    }
+    var tenant = await getTenantById({id: user.tenantId});
+    res.json(tenant);
 });

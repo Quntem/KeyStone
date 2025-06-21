@@ -1,0 +1,29 @@
+<h1>Create User</h1>
+<form id="createuserform" action="/admin/api/user" method="post">
+    <label for="username">Username:</label>
+    <input type="text" id="username" name="username" required>
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password" required>
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" required>
+    <label for="email">Email:</label>
+    <input type="email" id="email" name="email" required>
+    <label for="role">Role:</label>
+    <select id="role" name="role" required>
+        <option value="USER">User</option>
+        <option value="ADMIN">Admin</option>
+    </select>
+    <label for="tenant">Tenant:</label>
+    <select id="tenant" name="tenant" required>
+        
+    </select>
+    <button type="submit">Create User</button>
+</form>
+<script>
+    fetch("/admin/api/me/tenant").then(response => response.json()).then(data => {
+        document.getElementById("tenant").innerHTML += "<option value='" + data.id + "'>" + data.name + "</option>";
+        data.tenantChildren.forEach(child => {
+            document.getElementById("tenant").innerHTML += "<option value='" + child.id + "'>" + child.name + "</option>";
+        });
+    });
+</script>
