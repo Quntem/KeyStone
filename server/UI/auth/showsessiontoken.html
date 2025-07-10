@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Token</title>
+</head>
+<body>
+    <h1>Session Token</h1>
+    <p>Your session token is: <span id="sessionToken"></span></p>
+    <button onclick="copyToken()">Copy Token</button>
+    <p>You can now close this window</p>
+    <script>
+        function copyToken() {
+            navigator.clipboard.writeText(document.getElementById("sessionToken").innerHTML);
+        }
+        document.getElementById("sessionToken").innerHTML = document.cookie.split("sessionId=")[1];
+    </script>
+</body>
+</html>

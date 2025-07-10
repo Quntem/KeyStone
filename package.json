@@ -9,5 +9,8 @@
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/node": "^24.0.3"
+  },
+  "scripts": {
+    "start": "node server/index.ts"
   }
 }
