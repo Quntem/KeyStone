@@ -9,7 +9,7 @@ app.use(cookieParser());
 
 app.use("/auth", authRouter);
 app.use("/admin", adminRouter);
-app.use("/web", webRouter);
+app.use("/app", webRouter);
 
 app.listen(7045, () => {
     console.log("Server started on port 7045");
