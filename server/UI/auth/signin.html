@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
         body {
-            font-family: Arial, sans-serif;
+            font-family: Figtree, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -29,10 +30,24 @@
             /* align-items: center;
             justify-content: center; */
             background-color: #ffffff;
-            padding: 20px;
+            padding: 25px;
             border-radius: 10px;
             border: 1px solid #e4e4e7;
             /* box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); */
+        }
+
+        input {
+            border-radius: 5px;
+            border: 1px solid #e4e4e7;
+            padding: 5px;
+        }
+
+        button {
+            border-radius: 5px;
+            border: 0px solid #e4e4e7;
+            padding: 5px;
+            background-color: #2ac688;
+            color: #ffffff;
         }
 
         .logo {
@@ -47,8 +62,12 @@
         }
 
         .logoimg {
-            width: 30px;
-            height: 30px;
+            width: 25px;
+            height: 25px;
+        }
+
+        label {
+            margin-bottom: 5px;
         }
 
         .logotext {

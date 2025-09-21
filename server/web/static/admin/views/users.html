@@ -1,0 +1,16 @@
+<div class="maincontent">
+    <div class="appheader">
+        <div class="appheadertitle" id="appheader-title">Users in Tenant</div>
+    </div>
+    <div class="listfilters">
+        <input type="text" id="usersearch" placeholder="Search...">
+        <select id="userrolefilter">
+            <option value="">All Roles</option>
+            <option value="USER">User</option>
+            <option value="ADMIN">Admin</option>
+            <option value="SERVICE">Service</option>
+        </select>
+        <button onclick="filterUsers()" id="filterbutton">Filter</button>
+    </div>
+    <div id="userlist"></div>
+</div>

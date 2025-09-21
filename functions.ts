@@ -108,6 +108,7 @@ export async function getSession({sessionId}: {sessionId: string}) {
         return undefined;
     }
     if (session.expiresAt < new Date()) {
+        await deleteSession({sessionId: session.id});
         return undefined;
     }
     return session;
@@ -143,12 +144,21 @@ export async function getUserById({id}: {id: string}) {
     });
 }
 
-export function listSessions({userId}: {userId: string}) {
-    return prisma.session.findMany({
+export async function listSessions({userId}: {userId: string}) {
+    var sessions = await prisma.session.findMany({
         where: {
             userId,
         },
+        include: {
+            user: true,
+        },
     });
+    sessions.forEach((session) => {
+        if (session.expiresAt < new Date()) {
+            deleteSession({sessionId: session.id});
+        }
+    });
+    return sessions;
 }
 
 export async function deleteSession({sessionId}: {sessionId: string}) {
@@ -197,6 +207,81 @@ export async function getTenantById({id}: {id: string}) {
         },
         include: {
             tenantChildren: true,
+        },
+    });
+}
+
+export function revokeUserAppAccess({id}: {id: string}) {
+    return prisma.userAppAccess.delete({
+        where: {
+            id,
+        },
+    });
+}
+
+export function grantUserAppAccess({userId, appId}: {userId: string, appId: string}) {
+    return prisma.userAppAccess.create({
+        data: {
+            userId,
+            appId,
+        },
+    });
+}
+
+export function listUserAppAccess({userId}: {userId: string}) {
+    return prisma.userAppAccess.findMany({
+        where: {
+            userId,
+        },
+    });
+}
+
+export function createApp({name, description, logo, allowedURLs, tenantId}: {name: string, description: string, logo: string, allowedURLs: string[], tenantId: string}) {
+    return prisma.app.create({
+        data: {
+            name,
+            description,
+            logo,
+            allowedURLs,
+            tenantId,
+        },
+    });
+}
+
+export function getAppById({id}: {id: string}) {
+    return prisma.app.findUnique({
+        where: {
+            id,
+        },
+    });
+}
+
+export function listTenantApps({tenantId}: {tenantId: string}) {
+    return prisma.app.findMany({
+        where: {
+            tenantId,
+        },
+    });
+}
+
+export function updateApp({id, name, description, logo, allowedURLs}: {id: string, name: string, description: string, logo: string, allowedURLs: string[]}) {
+    return prisma.app.update({
+        where: {
+            id,
+        },
+        data: {
+            name,
+            description,
+            logo,
+            allowedURLs,
+        },
+    });
+}
+
+export function deleteApp({id}: {id: string}) {
+    return prisma.app.delete({
+        where: {
+            id,
         },
     });
 }

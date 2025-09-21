@@ -1,5 +1,5 @@
 import express from "express";
-import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById } from "../functions.ts";
+import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions } from "../functions.ts";
 import bodyParser from "body-parser";
 import { requireAuth } from "../webfunctions.ts";
 
@@ -65,6 +65,21 @@ router.get("/gettenant", requireAuth({redirectTo: "/auth/signin"}), async (req: 
     }
     var tenant = await getTenantById({id: user.tenantId});
     res.json(tenant);
+});
+
+router.get("/getsessions", requireAuth({redirectTo: "/auth/signin"}), async (req: any, res: any) => {
+    var session = await getSession({sessionId: req.cookies.sessionId});
+    if (!session) {
+        res.status(401).json({error: "Unauthorized"});
+        return;
+    }
+    var user = await getUserById({id: session.userId});
+    if (!user) {
+        res.status(401).json({error: "Unauthorized"});
+        return;
+    }
+    var sessions = await listSessions({userId: user.id});
+    res.json(sessions);
 });
 
 export {router}

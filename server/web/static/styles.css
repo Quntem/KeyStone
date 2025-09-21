@@ -26,6 +26,22 @@ header {
     border-bottom-right-radius: 999px;
 }
 
+.appheader {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin: 15px;
+    margin-bottom: 0px;
+    margin-top: 30px;
+}
+
+.appheadertitle {
+    margin-left: 15px;
+    font-family: 'Figtree', sans-serif;
+    font-size: 25px;
+    font-weight: 500;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -141,4 +157,50 @@ body {
     background-color: #2ac6882c;
     color: #177952;
 }
+
+.listfilters {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin: 15px;
+    margin-left: 30px;
+    margin-bottom: 0px;
+    gap: 15px;
+}
+
+.listfilters input {
+    width: 200px;
+    padding: 0px 15px;
+    border-radius: 5px;
+    border: 1px solid #e4e4e7;
+    height: 35px;
+    font-family: Figtree;
+}
+
+.listfilters select {
+    width: 200px;
+    padding: 5px 15px;
+    border-radius: 5px;
+    border: 1px solid #e4e4e7;
+    height: 37px;
+    font-family: Figtree;
+}
+
+.listfilters button {
+    padding: 5px 15px;
+    border-radius: 5px;
+    height: 37px;
+    border: 0px solid #e4e4e7;
+    background-color: #2ac688;
+    color: #ffffff;
+    font-family: Figtree;
+}
+
+.listtitle {
+    margin-left: 30px;
+    font-size: 16px;
+    color: #999999;
+    margin-top: 10px;
+}
+
 

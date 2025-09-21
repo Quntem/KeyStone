@@ -17,6 +17,7 @@ datasource db {
 enum Role {
   USER
   ADMIN
+  SERVICE
 }
 
 model User {
@@ -33,6 +34,8 @@ model User {
   managerId String?
   manager User? @relation(fields: [managerId], references: [id], name: "managerUsers")
   managerUsers User[] @relation(name: "managerUsers")
+  groups groupUser[]
+  userAppAccess userAppAccess[]
 }
 
 model tenant {
@@ -42,6 +45,27 @@ model tenant {
   parentTenantId String?
   parentTenant tenant? @relation(fields: [parentTenantId], references: [id] , name: "tenantChildren")
   tenantChildren tenant[] @relation(name: "tenantChildren")
+  apps app[]
+}
+
+model group {
+  id    String @id @default(cuid())
+  name  String @unique
+  users groupUser[]
+  type GroupType @default(Organizational)
+}
+
+enum GroupType {
+  Organizational
+  Functional
+}
+
+model groupUser {
+  id    String @id @default(cuid())
+  userId String
+  groupId String
+  user User @relation(fields: [userId], references: [id])
+  group group @relation(fields: [groupId], references: [id])
 }
 
 model session {
@@ -50,5 +74,27 @@ model session {
   createdAt DateTime @default(now())
   user User @relation(fields: [userId], references: [id])
   expiresAt DateTime @default(dbgenerated("now() + interval '24 hours'")) 
+}
+
+model app {
+    id    String @id @default(cuid())
+    logo String
+    description String
+    name  String @unique
+    tenantId String 
+    allowedURLs String[]
+    tenant tenant @relation(fields: [tenantId], references: [id])
+    userAppAccess userAppAccess[]
+
+}
+
+model userAppAccess {
+    id    String @id @default(cuid())
+    userId String
+    appId String
+    expiresAt DateTime?
+    createdAt DateTime @default(now())
+    user User @relation(fields: [userId], references: [id])
+    app app @relation(fields: [appId], references: [id])
 }
 

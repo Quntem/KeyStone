@@ -3,16 +3,29 @@ import { getSession, getUserById } from "./functions.ts";
 
 export function requireRole(role: string) {
     return (req: any, res: any, next: any) => {
-        if (!req.cookies?.sessionId) {
+        if (!req.auth?.role) {
             return res.status(401).json({ message: "Unauthorized" });
         }
+        if (req.auth.role != role) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+        console.log("Role found");
         next();
     };
 }
 
 export function requireAuth({redirectTo}: {redirectTo: string}) {
     return async (req: any, res: any, next: any) => {
-        if (!req.cookies?.sessionId) {
+        if (req.headers.authorization) {
+            var token = req.headers.authorization.split(" ")[1];
+            var session = await getSession({sessionId: token});
+            if (!session) {
+                console.log("Invalid session");
+                return res.status(401).json({ message: "Unauthorized" });
+            }
+            req.auth = await getUserById({id: session.userId});
+            next();
+        } else if (!req.cookies?.sessionId) {
             console.log("No session");
             if (redirectTo) {
                 console.log(req.originalUrl)
