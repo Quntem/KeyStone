@@ -36,16 +36,23 @@ model User {
   managerUsers User[] @relation(name: "managerUsers")
   groups groupUser[]
   userAppAccess userAppAccess[]
+  domainsCreator domain[]
+  disabled Boolean @default(false)
 }
 
 model tenant {
   id    String @id @default(cuid())
   name  String @unique
+  logo String?
+  color String?
+  description String?
+  colorContrast String?
   users User[]
   parentTenantId String?
   parentTenant tenant? @relation(fields: [parentTenantId], references: [id] , name: "tenantChildren")
   tenantChildren tenant[] @relation(name: "tenantChildren")
   apps app[]
+  domains domain[] @relation(name: "tenantDomains")
 }
 
 model group {
@@ -74,6 +81,9 @@ model session {
   createdAt DateTime @default(now())
   user User @relation(fields: [userId], references: [id])
   expiresAt DateTime @default(dbgenerated("now() + interval '24 hours'")) 
+  appSessions userAppSession[]
+  
+  
 }
 
 model app {
@@ -85,7 +95,7 @@ model app {
     allowedURLs String[]
     tenant tenant @relation(fields: [tenantId], references: [id])
     userAppAccess userAppAccess[]
-
+    mainUrl String
 }
 
 model userAppAccess {
@@ -96,5 +106,28 @@ model userAppAccess {
     createdAt DateTime @default(now())
     user User @relation(fields: [userId], references: [id])
     app app @relation(fields: [appId], references: [id])
+    appSessions userAppSession[]
 }
 
+model userAppSession {
+    id    String @id @default(cuid())
+    expiresAt DateTime?
+    createdAt DateTime @default(now())
+    userAppAccessId String
+    userAppAccess userAppAccess @relation(fields: [userAppAccessId], references: [id], onDelete: Cascade)
+    sessionId String
+    session session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model domain {
+  id             String   @id @unique @default(uuid())
+  name           String   @unique
+  createdAt      DateTime @default(now())
+  accessedAt     DateTime @default(now())
+  creatorId      String 
+  creator        User @relation(fields: [creatorId], references: [id])
+  verified       Boolean  @default(false)
+  tenantId       String
+  tenant         tenant? @relation(fields: [tenantId], references: [id], name: "tenantDomains")
+  hasMXRecord    Boolean  @default(false)
+}

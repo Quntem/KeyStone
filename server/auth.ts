@@ -1,5 +1,5 @@
 import express from "express";
-import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions } from "../functions.ts";
+import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions, deleteSession, listUserAppAccess, listAppSessions, createAppSession } from "../functions.ts";
 import bodyParser from "body-parser";
 import { requireAuth } from "../webfunctions.ts";
 
@@ -11,6 +11,10 @@ router.get("/signin", async (req: any, res: any) => {
         return;
     }
     res.sendFile("./auth/signin.html", { root: process.cwd() + "/server/UI" });
+});
+
+router.get("/userblocked", async (req: any, res: any) => {
+    res.sendFile("./auth/userblocked.html", { root: process.cwd() + "/server/UI" });
 });
 
 router.post("/signin", bodyParser.urlencoded({ extended: true }), async (req: any, res: any) => {
@@ -26,8 +30,23 @@ router.post("/signin", bodyParser.urlencoded({ extended: true }), async (req: an
         res.redirect("/auth/signin");
         return;
     }
+    const user = await getUserById({id: userId.id});
+    if (!user) {
+        res.redirect("/auth/signin");
+        return;
+    }
+    if (user.disabled) {
+        res.redirect("/auth/userblocked");
+        return;
+    }
     var session = await createSession({userId: userId.id, password: req.body.password});
-    res.cookie("sessionId", session.id);
+    const appSessions = await listUserAppAccess({userId: userId.id});
+    for (const appSession of appSessions) {
+        await createAppSession({userAppAccessId: appSession.id, sessionId: session.id});
+    }
+    res.cookie("sessionId", session.id, {
+        sameSite: "lax",
+    });
     res.redirect(req.body.redirectTo || "/auth/ui/showsessiontoken");
 });
 
@@ -36,7 +55,7 @@ router.get("/ui/showsessiontoken", requireAuth({redirectTo: "/auth/signin"}), as
 });
 
 router.get("/logout", requireAuth({redirectTo: "/auth/signin"}), async (req: any, res: any) => {
-    res.cookie("sessionId", "", { expires: new Date(0) });
+    res.cookie("sessionId", "", { expires: new Date(0), sameSite: "lax" });
     res.redirect(req.query.redirectTo || "/auth/signin");
 });
 
@@ -80,6 +99,31 @@ router.get("/getsessions", requireAuth({redirectTo: "/auth/signin"}), async (req
     }
     var sessions = await listSessions({userId: user.id});
     res.json(sessions);
+});
+
+router.post("/deletesession", requireAuth({redirectTo: "/auth/signin"}), express.json(), async (req: any, res: any) => {
+    var session = await getSession({sessionId: req.body.sessionId});
+    if (!session) {
+        res.status(401).json({error: "Unauthorized"});
+        return;
+    }
+    await deleteSession({sessionId: session.id});
+    res.json({success: true});
+});
+
+router.get("/apps", requireAuth({redirectTo: "/auth/signin"}), async (req: any, res: any) => {
+    var session = await getSession({sessionId: req.cookies.sessionId});
+    if (!session) {
+        res.status(401).json({error: "Unauthorized"});
+        return;
+    }
+    var user = await getUserById({id: session.userId});
+    if (!user) {
+        res.status(401).json({error: "Unauthorized"});
+        return;
+    }
+    var apps = await listUserAppAccess({userId: user.id});
+    res.json(apps);
 });
 
 export {router}

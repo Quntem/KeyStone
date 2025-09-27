@@ -1,4 +1,4 @@
-import { PrismaClient } from "./generated/prisma/index.js";
+import { PrismaClient, Role } from "./generated/prisma/index.js";
 import * as bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
@@ -11,7 +11,7 @@ export function comparePassword(password: string, hashedPassword: string) {
     return bcrypt.compareSync(password, hashedPassword);
 }
 
-export async function createUser({email, password, name, tenantId, username}: {email: string, password: string, name: string, tenantId: string, username: string}) {
+export async function createUser({email, password, name, tenantId, username, role}: {email: string, password: string, name: string, tenantId: string, username: string, role: string}) {
     var users = await prisma.user.findMany({
         where: {
             tenantId,
@@ -26,6 +26,7 @@ export async function createUser({email, password, name, tenantId, username}: {e
             email,
             password: hashPassword(password),
             name,
+            role: role == "ADMIN" ? Role.ADMIN : role == "USER" ? Role.USER : role == "SERVICE" ? Role.SERVICE : Role.USER,
             tenantId,
             username,
         },
@@ -75,6 +76,14 @@ export async function getUserIdByUsername({tenantId, username}: {tenantId: strin
             tenantId,
             path,
             username,
+        },
+    });
+}
+
+export function listChildTenants({tenantId}: {tenantId: string}) {
+    return prisma.tenant.findMany({
+        where: {
+            parentTenantId: tenantId,
         },
     });
 }
@@ -175,6 +184,13 @@ export async function listUsers({tenantId, path}: {tenantId: string, path?: stri
             tenantId,
             path: path ? path : "/",
         },
+        include: {
+            manager: true,
+            tenant: true,
+        },
+        omit: {
+            password: true,
+        },
     });
 }
 
@@ -225,6 +241,18 @@ export function grantUserAppAccess({userId, appId}: {userId: string, appId: stri
             userId,
             appId,
         },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    tenant: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                },
+            },
+        },
     });
 }
 
@@ -236,7 +264,7 @@ export function listUserAppAccess({userId}: {userId: string}) {
     });
 }
 
-export function createApp({name, description, logo, allowedURLs, tenantId}: {name: string, description: string, logo: string, allowedURLs: string[], tenantId: string}) {
+export function createApp({name, description, logo, allowedURLs, tenantId, mainUrl}: {name: string, description: string, logo: string, allowedURLs: string[], tenantId: string, mainUrl: string}) {
     return prisma.app.create({
         data: {
             name,
@@ -244,6 +272,7 @@ export function createApp({name, description, logo, allowedURLs, tenantId}: {nam
             logo,
             allowedURLs,
             tenantId,
+            mainUrl,
         },
     });
 }
@@ -261,10 +290,26 @@ export function listTenantApps({tenantId}: {tenantId: string}) {
         where: {
             tenantId,
         },
+        include: {
+            userAppAccess: {
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            tenant: true,
+                            name: true,
+                            email: true,
+                            role: true,
+                        },
+                    }
+                },
+            }
+        },
     });
 }
 
-export function updateApp({id, name, description, logo, allowedURLs}: {id: string, name: string, description: string, logo: string, allowedURLs: string[]}) {
+export function updateApp({id, name, description, logo, allowedURLs, mainUrl}: {id: string, name: string, description: string, logo: string, allowedURLs: string[], mainUrl: string}) {
     return prisma.app.update({
         where: {
             id,
@@ -274,6 +319,7 @@ export function updateApp({id, name, description, logo, allowedURLs}: {id: strin
             description,
             logo,
             allowedURLs,
+            mainUrl,
         },
     });
 }
@@ -285,3 +331,91 @@ export function deleteApp({id}: {id: string}) {
         },
     });
 }
+
+export function listAppSessions({sessionId}: {sessionId: string}) {
+    return prisma.userAppSession.findMany({
+        where: {
+            sessionId,
+        },
+    });
+}
+
+export function createAppSession({userAppAccessId, sessionId}: {userAppAccessId: string, sessionId: string}) {
+    return prisma.userAppSession.create({
+        data: {
+            userAppAccessId,
+            sessionId,
+        },
+    });
+}
+
+export function deleteAppSession({id}: {id: string}) {
+    return prisma.userAppSession.delete({
+        where: {
+            id,
+        },
+    });
+}
+
+export async function setUserDisabled({id, disabled}: {id: string, disabled: boolean}) {
+    const user = await prisma.user.update({
+        where: {
+            id,
+        },
+        data: {
+            disabled,
+        },
+    });
+    if (disabled) {
+        const sessions = await listSessions({userId: id});
+        for (const session of sessions) {
+            await deleteSession({sessionId: session.id});
+        }
+    }
+    return user;
+}
+
+export async function setTenantLogo({id, logo}: {id: string, logo: string}) {
+    return prisma.tenant.update({
+        where: {
+            id,
+        },
+        data: {
+            logo,
+        },
+    });
+}
+
+export async function setTenantColor({id, color}: {id: string, color: string}) {
+    return prisma.tenant.update({
+        where: {
+            id,
+        },
+        data: {
+            color,
+        },
+    });
+}
+
+export async function setTenantColorContrast({id, colorContrast}: {id: string, colorContrast: string}) {
+    return prisma.tenant.update({
+        where: {
+            id,
+        },
+        data: {
+            colorContrast,
+        },
+    });
+}
+
+export async function setTenantDescription({id, description}: {id: string, description: string}) {
+    return prisma.tenant.update({
+        where: {
+            id,
+        },
+        data: {
+            description,
+        },
+    });
+}
+

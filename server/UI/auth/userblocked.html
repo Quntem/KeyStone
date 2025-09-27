@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Blocked</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
+        body {
+            font-family: Figtree, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            top: 0;
+            left: 0;
+            position: fixed;
+            background-color: #f5f5f5;
+            color: #666666;
+            font-size: 16px;
+        }
+
+        #signinform {
+            display: flex;
+            flex-direction: column;
+            /* align-items: center;
+            justify-content: center; */
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #e4e4e7;
+            /* box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); */
+        }
+
+        input {
+            border-radius: 5px;
+            border: 1px solid #e4e4e7;
+            padding: 5px;
+        }
+
+        button {
+            border-radius: 5px;
+            border: 0px solid #e4e4e7;
+            padding: 5px;
+            background-color: #2ac688;
+            color: #ffffff;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            position: fixed;
+            left: 50%;
+            bottom: 20px;
+            transform: translateX(-50%);
+        }
+
+        .logoimg {
+            width: 25px;
+            height: 25px;
+        }
+
+        label {
+            margin-bottom: 5px;
+        }
+
+        .logotext {
+            margin-left: 10px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sign In</h1>
+    <div id="signinform">
+        <h1 style="margin-bottom: 10px;">Account is blocked</h1>
+        <p style="text-align: center;">Please contact your administrator</p>
+    </div>
+    <div class="logo">
+        <img src="/app/static/img/Group 66.svg" alt="Logo" class="logoimg">
+        <div class="logotext">Quntem KeyStone Directory</div>
+    </div>
+    <script>
+        var searchparams = new URLSearchParams(window.location.search);
+        document.getElementById("redirectTo").value = searchparams.get("redirectTo");
+    </script>
+</body>
+</html>
