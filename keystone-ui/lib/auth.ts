@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useDebounce } from 'use-debounce';
 
 export function useSession() {
     const reload = () => {
@@ -93,4 +94,117 @@ export async function deleteSession(sessionId: string) {
             "Accept": "application/json",
         }
     }).then(res => res.text())
+}
+
+export function UseUserAppAccess() {
+    const reload = () => {
+        setUserAppAccess({data: null, loaded: false, reload});
+    };
+    const [userAppAccess, setUserAppAccess] = useState({data: null, loaded: false, reload});
+    useEffect(() => {
+        if (!userAppAccess.loaded) {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/auth/apps", {credentials: "include", redirect: "manual"}).then((res) => {
+                if (res.ok) {
+                    return res.json();
+                } else {
+                    console.log("unauthorized");
+                    return {error: {
+                        text: "Unauthorized",
+                        code: "Unauthorized",
+                        status: 401,
+                    }}
+                }
+            }).then((data) => {
+                setUserAppAccess({data: data, loaded: true, reload});
+            });
+        }
+    }, [userAppAccess.loaded]);
+    return userAppAccess;
+}
+
+export function useEmailExists(email: string) {
+    const [value] = useDebounce(email, 500);
+    const [emailExists, setEmailExists] = useState(false);
+    useEffect(() => {
+        if (value) {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/auth/emailexists?email=" + value).then((res) => {
+                return res.json();
+            }).then((data) => {
+                setEmailExists(data.exists);
+            });
+        }
+    }, [value]);
+    return emailExists;
+}
+
+export function useTenantExists(name: string) {
+    const [value] = useDebounce(name, 500);
+    const [tenantExists, setTenantExists] = useState(false);
+    useEffect(() => {
+        if (value) {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/auth/tenantexists?tenantName=" + value).then((res) => {
+                return res.json();
+            }).then((data) => {
+                setTenantExists(data.exists);
+            });
+        }
+    }, [value]);
+    return tenantExists;
+}
+
+export function useDomainExists(domain: string) {
+    const [value] = useDebounce(domain, 500);
+    const [domainExists, setDomainExists] = useState(false);
+    useEffect(() => {
+        if (value) {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/auth/domainexists?domain=" + value).then((res) => {
+                return res.json();
+            }).then((data) => {
+                setDomainExists(data.exists);
+            });
+        }
+    }, [value]);
+    return domainExists;
+}
+
+export function setDisplayName(name: string) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/auth/userinfo", {
+            credentials: "include", 
+            redirect: "manual", 
+            method: "PATCH", 
+            body: JSON.stringify({name}),
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            }
+        }).then(res => {
+            if (res.ok) {
+                resolve(res.json());
+            } else {
+                reject();
+            }
+        })
+    });
+}
+
+export function setPassword(password: string) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/auth/setuserpassword", {
+            credentials: "include", 
+            redirect: "manual", 
+            method: "POST", 
+            body: JSON.stringify({password}),
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            }
+        }).then(res => {
+            if (res.ok) {
+                resolve(res.json());
+            } else {
+                reject();
+            }
+        })
+    });
 }

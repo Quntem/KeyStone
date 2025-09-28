@@ -52,13 +52,13 @@ export function useTenantsList() {
     return usersList;
 }
 
-export function createUser({name, username, email, role, tenantId, password}: {name: string, username: string, email: string, role: string, tenantId: string, password: string}) {
+export function createUser({name, username, email, role, tenantId, password, domainId}: {name: string, username: string, email: string, role: string, tenantId: string, password: string, domainId: string}) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/user", {
             credentials: "include", 
             redirect: "manual", 
             method: "POST", 
-            body: JSON.stringify({name, username, email, role, tenantId, password}),
+            body: JSON.stringify({name, username, email, role, tenantId, password, domainId}),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -263,4 +263,187 @@ export function getUserByUsername(username: string) {
             resolve(data);
         });
     });
+}
+
+export function removeUserFromApp({accessId, appId}: {accessId: string, appId: string}) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/app/" + appId + "/userappaccess/" + accessId, {
+            credentials: "include", 
+            redirect: "manual", 
+            method: "DELETE", 
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {error: {
+                    text: "Failed to remove user from app",
+                    code: "Failed to remove user from app",
+                    status: 401,
+                }}
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function updateUser({userId, name, username, email, role, domainId}: {userId: string, name: string, username: string, email: string, role: string, domainId: string}) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/user/" + userId, {
+            credentials: "include", 
+            redirect: "manual", 
+            method: "PATCH", 
+            body: JSON.stringify({name, username, email, role, domainId}),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {error: {
+                    text: "Failed to update user",
+                    code: "Failed to update user",
+                    status: 401,
+                }}
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function setUserPassword({userId, password}: {userId: string, password: string}) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/user/" + userId + "/setpassword", {
+            credentials: "include", 
+            redirect: "manual", 
+            method: "POST", 
+            body: JSON.stringify({password}),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {error: {
+                    text: "Failed to update user password",
+                    code: "Failed to update user password",
+                    status: 401,
+                }}
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function updateApp({appId, name, description, logo, mainUrl}: {appId: string, name: string, description: string, logo: string, mainUrl: string}) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/app/" + appId, {
+            credentials: "include", 
+            redirect: "manual", 
+            method: "POST", 
+            body: JSON.stringify({name, description, logo, mainUrl}),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {error: {
+                    text: "Failed to update app",
+                    code: "Failed to update app",
+                    status: 401,
+                }}
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function createDomain({domain}: {domain: string}) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/domain", {
+            credentials: "include", 
+            redirect: "manual", 
+            method: "POST", 
+            body: JSON.stringify({domain}),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {error: {
+                    text: "Failed to create domain",
+                    code: "Failed to create domain",
+                    status: 401,
+                }}
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function verifyDomain({domainId}: {domainId: string}) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/domain/" + domainId + "/verify", {
+            credentials: "include", 
+            redirect: "manual", 
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {error: {
+                    text: "Failed to verify domain",
+                    code: "Failed to verify domain",
+                    status: 401,
+                }}
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function useDomainsList() {
+    const reload = () => {
+        setDomainsList({data: null, loaded: false, reload});
+    };
+    const [domainsList, setDomainsList] = useState({data: null, loaded: false, reload});
+    useEffect(() => {
+        if (!domainsList.loaded) {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/domains", {credentials: "include", redirect: "manual"}).then((res) => {
+                if (res.ok) {
+                    return res.json();
+                } else {
+                    console.log("unauthorized");
+                    return {error: {
+                        text: "Unauthorized",
+                        code: "Unauthorized",
+                        status: 401,
+                    }}
+                }
+            }).then((data) => {
+                setDomainsList({data: data, loaded: true, reload});
+            });
+        }
+    }, [domainsList.loaded]);
+    return domainsList;
 }

@@ -30,24 +30,41 @@
             /* align-items: center;
             justify-content: center; */
             background-color: #ffffff;
-            padding: 25px;
+            padding: 35px;
             border-radius: 10px;
             border: 1px solid #e4e4e7;
             /* box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); */
+            box-shadow: rgba(0, 0, 0, 0.08) 0px 4px 12px;
         }
 
         input {
             border-radius: 5px;
             border: 1px solid #e4e4e7;
-            padding: 5px;
+            padding: 8px 12px;
+            font-family: Figtree, sans-serif;
+            font-size: 16px;
+            width: 200px;
         }
 
         button {
             border-radius: 5px;
             border: 0px solid #e4e4e7;
-            padding: 5px;
+            padding: 10px;
             background-color: #2ac688;
             color: #ffffff;
+            font-family: Figtree, sans-serif;
+            font-weight: 400;
+            margin-top: 10px;
+            font-size: 16px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        button:hover {
+            background-color: #25a67f;
         }
 
         .logo {
@@ -67,26 +84,41 @@
         }
 
         label {
-            margin-bottom: 5px;
+            margin-bottom: 10px;
+            color: #999999;
+            font-weight: 400;
+            font-size: 14px;
         }
 
         .logotext {
             margin-left: 10px;
             font-size: 20px;
+            color: #999999;
+        }
+
+        h1 {
+            margin-top: 10px;
+            font-family: Figtree, sans-serif;
+            font-weight: 500;
+            font-size: 25px;
         }
     </style>
 </head>
 <body>
-    <h1>Sign In</h1>
     <form action="/auth/signin" method="post" id="signinform">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-key-round-icon lucide-key-round"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>
+        <h1>Sign In</h1>
         <input type="hidden" name="redirectTo" id="redirectTo">
-        <label for="username">Username:</label>
+        <label for="username">Username or Email:</label>
         <input type="text" id="username" name="username">
         <br>
         <label for="password">Password:</label>
         <input type="password" id="password" name="password">
         <br>
-        <button type="submit">Sign In</button>
+        <button type="submit">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-in-icon lucide-log-in"><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/></svg>
+            <div>Sign In</div>
+        </button>
     </form>
     <div class="logo">
         <img src="/app/static/img/Group 66.svg" alt="Logo" class="logoimg">

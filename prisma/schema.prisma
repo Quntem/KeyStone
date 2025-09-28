@@ -36,8 +36,10 @@ model User {
   managerUsers User[] @relation(name: "managerUsers")
   groups groupUser[]
   userAppAccess userAppAccess[]
-  domainsCreator domain[]
+  domainsCreator domain[] @relation(name: "DomainsCreator")
   disabled Boolean @default(false)
+  domainId String?
+  domain domain? @relation(fields: [domainId], references: [id], name: "domainUsers")
 }
 
 model tenant {
@@ -81,9 +83,7 @@ model session {
   createdAt DateTime @default(now())
   user User @relation(fields: [userId], references: [id])
   expiresAt DateTime @default(dbgenerated("now() + interval '24 hours'")) 
-  appSessions userAppSession[]
-  
-  
+  appSessions userAppSession[] 
 }
 
 model app {
@@ -124,10 +124,11 @@ model domain {
   name           String   @unique
   createdAt      DateTime @default(now())
   accessedAt     DateTime @default(now())
-  creatorId      String 
-  creator        User @relation(fields: [creatorId], references: [id])
+  creatorId      String?
+  creator        User? @relation(fields: [creatorId], references: [id], name: "DomainsCreator")
   verified       Boolean  @default(false)
   tenantId       String
   tenant         tenant? @relation(fields: [tenantId], references: [id], name: "tenantDomains")
   hasMXRecord    Boolean  @default(false)
+  domainUsers User[] @relation(name: "domainUsers")
 }

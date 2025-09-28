@@ -1,5 +1,6 @@
 import { Header } from "@/components/header";
 import { AdminSidebar } from "@/components/sidebar";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata = {
     title: "KeyStone Admin Center",
@@ -14,6 +15,7 @@ export default function AdminLayout({children}: {children: React.ReactNode}) {
                 <AdminSidebar />
                 {children}
             </div>
+            <Toaster position="top-center" />
         </div>
     );
 }

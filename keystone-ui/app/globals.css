@@ -30,6 +30,7 @@ header {
     overflow-y: auto;
     color: var(--qu-text);
     background-color: var(--qu-background);
+    padding-bottom: 20px;
 }
 
 .header-user-text {
@@ -181,6 +182,128 @@ body {
 .admin-page-subtitle {
     font-size: 16px;
     color: #999999;
+}
+
+.app-page-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    width: 100px;
+    transition: all 0.1s ease-in-out;
+    &:hover {
+        background-color: var(--header-background);
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--qu-border-color);
+    }
+}
+
+.app-page-item-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--qu-text);
+}
+
+.app-page-item-subtitle {
+    font-size: 12px;
+    color: var(--qu-text-secondary);
+    text-align: center;
+}
+
+.app-page-item-logo {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+}
+
+.info-banner {
+    width: 100%;
+    height: 350px;
+    background: #257EC7;
+    color: white;
+    background: linear-gradient(135deg, rgba(37, 126, 199, 1) 0%, rgba(130, 57, 230, 1) 100%);
+}
+
+.info-banner-inner {
+    width: 75%;
+    height: 100%;
+    margin: auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.info-banner-title {
+    margin-top: 10px;
+    font-size: 35px;
+    font-weight: 500;
+}
+
+.info-banner-subtitle {
+    font-size: 20px;
+    font-weight: 500;
+}
+
+.info-banner-left {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.info-banner-buttonrow {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    margin-top: 10px;
+}
+
+.info-content {
+    width: 100%;
+    height: 100%;
+    padding-top: 40px;
+    overflow-y: auto;
+}
+
+.info-content-inner {
+    width: 75%;
+    height: 100%;
+    margin: auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.info-content-left {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.info-content-title {
+    color: var(--qu-text);
+    font-size: 25px;
+    font-weight: 500;
+}
+
+.info-content-subtitle {
+    color: var(--qu-text);
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.get-started-page {
+    width: 100vw;
+    height: calc(100dvh - 51px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 @custom-variant dark (&:is(.dark *));

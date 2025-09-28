@@ -1,7 +1,11 @@
 import { PrismaClient, Role } from "./generated/prisma/index.js";
 import * as bcrypt from "bcrypt";
+import * as dns from "dns/promises";
 
 const prisma = new PrismaClient();
+
+const resolver = new dns.Resolver();
+resolver.setServers(["1.1.1.1", "8.8.8.8"]);
 
 export function hashPassword(password: string) {
     return bcrypt.hashSync(password, 10);
@@ -11,7 +15,7 @@ export function comparePassword(password: string, hashedPassword: string) {
     return bcrypt.compareSync(password, hashedPassword);
 }
 
-export async function createUser({email, password, name, tenantId, username, role}: {email: string, password: string, name: string, tenantId: string, username: string, role: string}) {
+export async function createUser({email, password, name, tenantId, username, role, domainId}: {email: string, password: string, name: string, tenantId: string, username: string, role: string, domainId: string}) {
     var users = await prisma.user.findMany({
         where: {
             tenantId,
@@ -29,6 +33,18 @@ export async function createUser({email, password, name, tenantId, username, rol
             role: role == "ADMIN" ? Role.ADMIN : role == "USER" ? Role.USER : role == "SERVICE" ? Role.SERVICE : Role.USER,
             tenantId,
             username,
+            domainId
+        },
+    });
+}
+
+export function SetUserPassword({userId, password}: {userId: string, password: string}) {
+    return prisma.user.update({
+        where: {
+            id: userId,
+        },
+        data: {
+            password: hashPassword(password),
         },
     });
 }
@@ -51,6 +67,21 @@ export async function getUserIdByEmail({email}: {email: string}) {
     return await prisma.user.findUnique({
         where: {
             email,
+        },
+    });
+}
+
+export async function updateUser({id, name, email, username, role, domainId}: {id: string, name: string, email: string, username: string, role: string, domainId: string}) {
+    return await prisma.user.update({
+        where: {
+            id,
+        },
+        data: {
+            name,
+            email,
+            username,
+            role: role == "ADMIN" ? Role.ADMIN : role == "USER" ? Role.USER : role == "SERVICE" ? Role.SERVICE : Role.USER,
+            domainId,
         },
     });
 }
@@ -261,6 +292,9 @@ export function listUserAppAccess({userId}: {userId: string}) {
         where: {
             userId,
         },
+        include: {
+            app: true,
+        },
     });
 }
 
@@ -357,6 +391,26 @@ export function deleteAppSession({id}: {id: string}) {
     });
 }
 
+export function getUserAppAccess({id}: {id: string}) {
+    return prisma.userAppAccess.findUnique({
+        where: {
+            id,
+        },
+        include: {
+            app: true,
+            user: {
+                select: {
+                    tenantId: true,
+                    username: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                },
+            }
+        },
+    });
+}
+
 export async function setUserDisabled({id, disabled}: {id: string, disabled: boolean}) {
     const user = await prisma.user.update({
         where: {
@@ -419,3 +473,87 @@ export async function setTenantDescription({id, description}: {id: string, descr
     });
 }
 
+export async function verifyDomain({domainId}: {domainId: string}) {
+    const domain = await prisma.domain.findUnique({
+        where: {
+            id: domainId,
+        },
+    });
+    if (!domain) {
+        throw new Error("Domain not found");
+    }
+    const addresses = await dns.resolve("_quntem-challenge." + domain.name, "TXT");
+    var hasAddress = false;
+    addresses.forEach((address) => {
+        if (address.includes(domain.id)) {
+            hasAddress = true;
+        }
+    });
+    return await prisma.domain.update({
+        where: {
+            id: domainId,
+        },
+        data: {
+            verified: hasAddress,
+        },
+    });
+}
+
+export async function createDomain({name, creatorId, tenantId}: {name: string, creatorId?: string, tenantId: string}) {
+    return await prisma.domain.create({
+        data: {
+            name,
+            creatorId,
+            tenantId,
+        },
+    });
+}
+
+export async function deleteDomain({id}: {id: string}) {
+    return await prisma.domain.delete({
+        where: {
+            id,
+        },
+    });
+}
+
+export async function getDomainByName({name}: {name: string}) {
+    return await prisma.domain.findUnique({
+        where: {
+            name,
+        },
+    });
+}
+
+export async function listDomains({tenantId}: {tenantId: string}) {
+    return await prisma.domain.findMany({
+        where: {
+            tenantId,
+        },
+        include: {
+            creator: true,
+            domainUsers: {
+                select: {
+                    id: true,
+                    username: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                }
+            }
+        },
+    });
+}
+
+export async function updateDomain({id, name, creatorId, tenantId}: {id: string, name: string, creatorId?: string, tenantId: string}) {
+    return await prisma.domain.update({
+        where: {
+            id,
+        },
+        data: {
+            name,
+            creatorId,
+            tenantId,
+        },
+    });
+}

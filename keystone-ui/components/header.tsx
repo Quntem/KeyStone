@@ -3,16 +3,18 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { LogOut, useSession } from "@/lib/auth";
 import { JSX, useEffect, useRef, useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { ChevronDownIcon, LayoutGrid, LogOutIcon, MenuIcon, SettingsIcon, UserIcon } from "lucide-react";
+import { ChevronDownIcon, LayoutGrid, LogInIcon, LogOutIcon, MenuIcon, SettingsIcon, SparklesIcon, UserIcon } from "lucide-react";
 import { useWindowSize } from "@/lib/screensize";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { AdminSidebar, UserSidebar } from "./sidebar";
 import { usePathname, useRouter } from "next/navigation";
+import { Button } from "./ui/button";
 
 export const Header = ({title}: {title: string}) => {
     const session = useSession();
     const size = useWindowSize();
     const [open, setOpen] = useState(false);
+    const path = usePathname();
     useEffect(() => {
         if (session.data) {
             console.log(session.data);
@@ -24,7 +26,7 @@ export const Header = ({title}: {title: string}) => {
     return (
         <header>
             <SidebarDrawer open={open} onOpenChange={setOpen} />
-            {(size.width < 1024 && size.width != 0) ? <MenuIcon style={{cursor: "pointer", marginLeft: "15px"}} size="20" onClick={() => {setOpen(true)}} /> : session.data?.user?.tenant?.logo ? <><img src={session.data?.user?.tenant?.logo} className="header-logo" /><div className="header-logo-divider" /></> : null}
+            {(size.width < 1024 && size.width != 0 && !path.startsWith("/apps")) ? <MenuIcon style={{cursor: "pointer", marginLeft: "15px"}} size="20" onClick={() => {setOpen(true)}} /> : session.data?.user?.tenant?.logo ? <><img src={session.data?.user?.tenant?.logo} className="header-logo" /><div className="header-logo-divider" /></> : null}
             <div style={{width: "15px"}} />
             <HeaderDropdown user={session} title={title} />
             <div style={{flex: 1}} />
@@ -85,7 +87,7 @@ function HeaderUser() {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <div className="header-user-container-outer">
-                    {(size.width < 500 && size.width != 0) ? null : <div className="header-user-container">
+                    {(size.width < 550 && size.width != 0) ? null : <div className="header-user-container">
                         <div className="header-user-text">{session.data?.user?.name} ({session.data?.user?.tenant?.name + "/" + session.data?.user?.username})</div>
                         <div className="header-company-text">{session.data?.user?.email} ({session.data?.user?.tenant?.name})</div>
                     </div>}
@@ -104,3 +106,27 @@ function HeaderUser() {
         </DropdownMenu>
     );
 }
+
+export function InfoHeader() {
+    const router = useRouter();
+    return (
+        <header>
+            <div style={{width: "15px"}} />
+            <div className="header-title">Quntem KeyStone</div>
+            <div style={{flex: 1}} />
+            <Button size="sm" variant="outline" style={{marginRight: "10px"}} onClick={() => {router.push("/account")}}><LogInIcon size={20}/>Access My Account</Button>
+            <Button size="sm" style={{marginRight: "10px"}} onClick={() => {router.push("/get-started")}}><SparklesIcon size={20}/>Get Started</Button>
+        </header>
+    );
+}
+
+export function GetStartedHeader() {
+    return (
+        <header>
+            <div style={{width: "15px"}} />
+            <div className="header-title">Quntem KeyStone</div>
+            <div style={{flex: 1}} />
+        </header>
+    );
+}
+    

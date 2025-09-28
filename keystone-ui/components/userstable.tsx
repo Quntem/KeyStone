@@ -1,5 +1,5 @@
 "use client"
-import { createUser, setUserDisabled, useUsersList } from "@/lib/admin";
+import { createUser, setUserDisabled, setUserPassword, updateUser, useDomainsList, useUsersList } from "@/lib/admin";
 import { useReactTable, getCoreRowModel, ColumnDef, flexRender, Row, ColumnFiltersState } from "@tanstack/react-table";
 import {
     Table,
@@ -24,7 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "./ui/button";
 import { CheckIcon, KeyIcon, Loader2Icon, PlusIcon, SaveIcon, TrashIcon, XIcon, XOctagonIcon } from "lucide-react";
 import { Input } from "./ui/input";
-import { ConfirmDialog } from "./confirmDialog";
+import { ConfirmDialog, InputDialog } from "./confirmDialog";
 import { useSession } from "@/lib/auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import isEmail from "is-email";
@@ -82,7 +82,7 @@ export function UsersTable({usersListHook}: {usersListHook: any}) {
         },
         onColumnFiltersChange: setColumnFilters,
     });
-    if (!usersListHook.loaded) {
+    if (!usersListHook.loaded || !usersListHook.data?.users) {
         return <div>Loading...</div>;
     }
     return (
@@ -134,13 +134,13 @@ export function UserInfoDrawer({open, setOpen, user, usersListHook}: {open: bool
     const [name, setName] = useState(user.name);
     const [username, setUsername] = useState(user.username);
     const [email, setEmail] = useState(user.email);
-    const [manager, setManager] = useState(user.managerId);
-    const [tenant, setTenant] = useState(user.tenantId);
+    const [role, setRole] = useState(user.role);
     const [openConfirm, setOpenConfirm] = useState(false);
+    const [domainId, setDomainId] = useState(user.domainId);    
     return (
         <>
             <Drawer handleOnly direction="right" open={open} onClose={() => {
-                if (name !== user.name || username !== user.username || email !== user.email || manager !== user.managerId || tenant !== user.tenantId) {
+                if (name !== user.name || username !== user.username || email !== user.email || role !== user.role) {
                     setOpenConfirm(true);
                 } else {
                     setOpen(false);
@@ -157,19 +157,32 @@ export function UserInfoDrawer({open, setOpen, user, usersListHook}: {open: bool
                         <InputField label="Name" value={name} setValue={setName} />
                         <PrefixedInput label="Username" value={username} setValue={setUsername} prefix={user.tenant?.name + "/"} />
                         {/* <SuffixedInput fitInput label="Email" value={email} setValue={setEmail} suffix="@quintiq.com" pattern="^[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*$" /> */}
-                        <InputField label="Email" value={email} setValue={setEmail} />
-                        <InputField label="Manager" value={manager} setValue={setManager} />
+                        {/* <InputField label="Email" value={email} setValue={setEmail} /> */}
+                        <EmailOwnedDomainInput label="Email" value={email} setValue={setEmail} domainId={domainId} setDomainId={setDomainId} />
+                        <SelectInput label="Role" value={role} setValue={setRole} options={[
+                            {id: "ADMIN", name: "Admin", description: "Has full access to everything in the tenant"},
+                            {id: "USER", name: "User", description: "Has limited access to the tenant"},
+                            {id: "SERVICE", name: "Service", description: "An application or service that can perform actions automatically"}
+                        ]} />
+                        {/* <InputField label="Manager" value={manager} setValue={setManager} /> */}
                         {/* <InputField label="Tenant" value={tenant} setValue={setTenant} /> */}
                     </div>
                     <Separator />
                     <DrawerFooter style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end"}}>
                         <Button
-                            disabled={name === user.name && username === user.username && email === user.email && manager === user.managerId && tenant === user.tenantId}
+                            disabled={name === user.name && username === user.username && email === user.email && role === user.role}
                             variant="outline"
-                            onClick={() => setOpen(false)}
+                            onClick={() => {
+                                updateUser({userId: user.id, name, username, email, role, domainId}).then(() => {
+                                    setOpen(false);
+                                    setTimeout(() => {
+                                        usersListHook.reload();
+                                    }, 1000);
+                                });
+                            }}
                         ><SaveIcon size={20} />Save</Button>
                         <Button onClick={() => {
-                            if (name !== user.name || username !== user.username || email !== user.email || manager !== user.managerId || tenant !== user.tenantId) {
+                            if (name !== user.name || username !== user.username || email !== user.email || role !== user.role || domainId !== user.domainId) {
                                 setOpenConfirm(true);
                             } else {
                                 setOpen(false);
@@ -188,8 +201,8 @@ export function UserInfoDrawer({open, setOpen, user, usersListHook}: {open: bool
                     setName(user.name);
                     setUsername(user.username);
                     setEmail(user.email);
-                    setManager(user.managerId);
-                    setTenant(user.tenantId);
+                    setRole(user.role);
+                    setDomainId(user.domainId);
                 }}
                 onClose={() => setOpenConfirm(false)}
             />
@@ -197,11 +210,37 @@ export function UserInfoDrawer({open, setOpen, user, usersListHook}: {open: bool
     );
 }
 
-export function InputField({label, value, setValue, type}: {label: string, value: string, setValue: (value: string) => void, type?: HTMLInputTypeAttribute}) {
+export function InputField({label, value, setValue, type, style, autoComplete}: {label: string, value: string, setValue: (value: string) => void, type?: HTMLInputTypeAttribute, style?: React.CSSProperties, autoComplete?: HTMLInputTypeAttribute}) {
     return (
-        <div style={{padding: "20px 20px 0px 20px"}}>
+        <div style={{padding: "20px 20px 0px 20px", ...style}}>
             <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>{label}</div>
-            <Input style={{backgroundColor: "var(--header-background)"}} value={value} onChange={(e) => setValue(e.target.value)} type={type} />
+            <Input autoCorrect="off" autoCapitalize="off" style={{backgroundColor: "var(--header-background)"}} value={value} onChange={(e) => setValue(e.target.value)} type={type} autoComplete={autoComplete} />
+        </div>
+    );
+}
+
+export function EmailOwnedDomainInput({label, value, setValue, type, style, autoComplete, domainId, setDomainId}: {label: string, value: string, setValue: (value: string) => void, type?: HTMLInputTypeAttribute, style?: React.CSSProperties, autoComplete?: HTMLInputTypeAttribute, domainId?: string, setDomainId?: (domainId: string) => void}) {
+    const domains = useDomainsList();
+    const [emailLocal, setEmailLocal] = useState(value.split("@")[0]);
+    useEffect(() => {
+        setValue(emailLocal + "@" + domains.data?.find((domain: any) => domain.id === domainId)?.name);
+    }, [emailLocal, domainId, domains]);
+    return (
+        <div style={{padding: "20px 20px 0px 20px", ...style}}>
+            <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>{label}</div>
+            <div className="flex flex-row gap-2">
+                <Input autoCorrect="off" autoCapitalize="off" style={{backgroundColor: "var(--header-background)"}} value={emailLocal} onChange={(e) => setEmailLocal(e.target.value)} type={type} autoComplete={autoComplete} />
+                <Select value={domainId} onValueChange={setDomainId}>
+                    <SelectTrigger style={{backgroundColor: "var(--header-background)"}}>
+                        <SelectValue placeholder="Select a domain" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {domains.data?.map((domain: any) => (
+                            <SelectItem disabled={!domain.verified} key={domain.id} value={domain.id}>@{domain.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
         </div>
     );
 }
@@ -209,11 +248,13 @@ export function InputField({label, value, setValue, type}: {label: string, value
 function UserQuickActions({user, usersListHook, setOpen}: {user: any, usersListHook: any, setOpen: (open: boolean) => void}) {
     const size = useWindowSize();
     const [confirmDisable, setConfirmDisable] = useState(false);
+    const [openPassword, setOpenPassword] = useState(false);
+    const [password, setPassword] = useState("");
     return (
         <div style={{padding: "20px 20px 0px 20px"}}>
             <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>Quick Actions</div>
             {!user.disabled && <div className={size.width < 500 ? "flex items-center flex-col gap-2 w-full" : "flex items-center flex-row gap-2 w-full"}>
-                <Button variant="outline" style={{flex: "1", width: size.width < 500 ? "100%" : "auto"}}><KeyIcon size={20} /> Password</Button>
+                <Button variant="outline" style={{flex: "1", width: size.width < 500 ? "100%" : "auto"}} onClick={() => setOpenPassword(true)}><KeyIcon size={20} /> Password</Button>
                 <Button variant="outline" style={{flex: "1", width: size.width < 500 ? "100%" : "auto"}} onClick={() => setConfirmDisable(true)}><XOctagonIcon size={20} /> Disable</Button>
                 <Button variant="outline" style={{flex: "1", width: size.width < 500 ? "100%" : "auto"}}><TrashIcon size={20} /> Delete</Button>
             </div>}
@@ -235,17 +276,36 @@ function UserQuickActions({user, usersListHook, setOpen}: {user: any, usersListH
                 }}
                 onClose={() => setConfirmDisable(false)}
             />
+            <InputDialog
+                title="Set Password"
+                description="Set a new password for this user"
+                isOpen={openPassword}
+                onConfirm={() => {
+                    setUserPassword({userId: user.id, password: password}).then(() => {
+                        setOpen(false);
+                        setOpenPassword(false);
+                        setPassword("");
+                        setTimeout(() => {
+                            usersListHook.reload();
+                        }, 1000);
+                    });
+                }}
+                onClose={() => setOpenPassword(false)}
+                input={password}
+                setInput={setPassword}
+                inputType="password"
+            />
         </div>
     );
 }
 
-export function PrefixedInput({label, value, setValue, prefix}: {label: string, value: string, setValue: (value: string) => void, prefix: string}) {
+export function PrefixedInput({label, value, setValue, prefix, style}: {label: string, value: string, setValue: (value: string) => void, prefix: string, style?: React.CSSProperties}) {
     return (
-        <div style={{padding: "20px 20px 0px 20px"}}>
+        <div style={{padding: "20px 20px 0px 20px", ...style}}>
             <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>{label}</div>
             <div className="flex items-center border border-input rounded-md shadow-xs bg-background focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px] transition-[color,box-shadow] px-3 h-9 text-base">
                 <span style={{color: "var(--qu-text-secondary)"}} className="select-none text-[14px]">{prefix}</span>
-                <input type="text" value={value} onChange={(e) => setValue(e.target.value)} className="outline-none text-[14px] w-full" />
+                <input autoCorrect="off" autoCapitalize="off" type="text" value={value} onChange={(e) => setValue(e.target.value)} className="outline-none text-[14px] w-full" />
             </div>
         </div>
     );
@@ -274,12 +334,12 @@ export function SelectInput({label, value, setValue, options}: {label: string, v
     );
 }
 
-export function SuffixedInput({label, value, setValue, suffix, fitInput, pattern}: {label: string, value: string, setValue: (value: string) => void, suffix: string, fitInput?: boolean, pattern?: string}) {
+export function SuffixedInput({label, value, setValue, suffix, fitInput, pattern, style}: {label: string, value: string, setValue: (value: string) => void, suffix: string, fitInput?: boolean, pattern?: string, style?: React.CSSProperties}) {
     return (
-        <div style={{padding: "20px 20px 0px 20px"}}>
+        <div style={{padding: "20px 20px 0px 20px", ...style}}>
             <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>{label}</div>
             <div className="flex items-center border border-input rounded-md shadow-xs bg-background focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px] transition-[color,box-shadow] px-3 h-9 text-base">
-                <input pattern={pattern} type="text" value={value} onChange={(e) => setValue(e.target.value)} className={"outline-none text-[14px]" + (fitInput ? "" : " w-full")} style={{fieldSizing: "content"}} />
+                <input autoCorrect="off" autoCapitalize="off" pattern={pattern} type="text" value={value} onChange={(e) => setValue(e.target.value)} className={"outline-none text-[14px]" + (fitInput ? "" : " w-full")} style={{fieldSizing: "content"}} />
                 <span style={{color: "var(--qu-text-secondary)"}} className="select-none text-[14px]">{suffix}</span>
             </div>
         </div>
@@ -293,6 +353,7 @@ export function AddUserDrawer({open, setOpen, usersListHook}: {open: boolean, se
     const [role, setRole] = useState("");
     const session = useSession();
     const [password, setPassword] = useState("");
+    const [domainId, setDomainId] = useState("");
     const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
     return (
         <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen}>
@@ -310,7 +371,8 @@ export function AddUserDrawer({open, setOpen, usersListHook}: {open: boolean, se
                 {status === "idle" && <div className="drawer-mainarea">
                     <InputField label="Name" value={name} setValue={setName} />
                     <PrefixedInput label="Username" value={username} setValue={setUsername} prefix={session.data?.user?.tenant?.name + "/"} />
-                    <InputField label="Email" value={email} setValue={setEmail} />
+                    {/* <InputField label="Email" value={email} setValue={setEmail} /> */}
+                    <EmailOwnedDomainInput label="Email" value={email} setValue={setEmail} domainId={domainId} setDomainId={setDomainId} />
                     <InputField label="Password" value={password} setValue={setPassword} type="password" />
                     <SelectInput label="Role" value={role} setValue={setRole} options={[
                         {id: "ADMIN", name: "Admin", description: "Has full access to everything in the tenant"},
@@ -349,7 +411,8 @@ export function AddUserDrawer({open, setOpen, usersListHook}: {open: boolean, se
                                 email,
                                 role,
                                 tenantId: session.data?.user?.tenant?.id,
-                                password
+                                password,
+                                domainId
                             });
                             setStatus("success");
                             usersListHook.reload();

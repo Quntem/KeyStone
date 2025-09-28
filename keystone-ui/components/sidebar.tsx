@@ -46,7 +46,7 @@ export const AdminSidebar = ({ignoreSize}: {ignoreSize?: boolean}) => {
             <SidebarItem title="Home" onClick={() => {router.push("/admin")}} Icon={HomeIcon} active={path === "/admin"} index={0} />
             <SidebarItem title="Information" onClick={() => {router.push("/admin/information")}} Icon={PenIcon} active={path === "/admin/information"} index={1} />
             <SidebarItem title="Users" onClick={() => {router.push("/admin/users")}} Icon={IdCardLanyardIcon} active={path === "/admin/users"} index={2} />
-            <SidebarItem title="Tenants" onClick={() => {router.push("/admin/tenants")}} Icon={BuildingIcon} active={path === "/admin/tenants"} index={3} />
+            {/* <SidebarItem title="Tenants" onClick={() => {router.push("/admin/tenants")}} Icon={BuildingIcon} active={path === "/admin/tenants"} index={3} /> */}
             <SidebarItem title="Groups" onClick={() => {router.push("/admin/groups")}} Icon={UsersIcon} active={path === "/admin/groups"} index={4} />
             <SidebarItem title="Domains" onClick={() => {router.push("/admin/domains")}} Icon={GlobeIcon} active={path === "/admin/domains"} index={5} />
             <SidebarItem title="Apps" onClick={() => {router.push("/admin/apps")}} Icon={LayoutGridIcon} active={path === "/admin/apps"} index={6} />

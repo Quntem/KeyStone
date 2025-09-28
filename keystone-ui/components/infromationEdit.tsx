@@ -4,6 +4,8 @@ import { SaveIcon, XIcon } from "lucide-react";
 import { Input } from "./ui/input";
 import { useState } from "react";
 import { setTenantDescription, setTenantLogo } from "@/lib/admin";
+import { setDisplayName, setPassword } from "@/lib/auth";
+import { toast } from "sonner";
 export function SetLogo({defaultLogo}: {defaultLogo: string}) {
     const [originalLogo, setOriginalLogo] = useState(defaultLogo);
     const [logo, setLogo] = useState(defaultLogo);
@@ -54,6 +56,53 @@ export function SetDescription({defaultDescription}: {defaultDescription: string
         <CardFooter style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: "10px"}}>
             <Button variant="outline" disabled={description === originalDescription} onClick={() => {setTenantDescription(description).then(() => {setOriginalDescription(description)});}}><SaveIcon size={20} />Save</Button>
             <Button variant="outline" onClick={() => setDescription("")}><XIcon size={20} />Remove</Button>
+        </CardFooter>
+    </Card>
+}
+
+export function SetDisplayName({defaultDisplayName}: {defaultDisplayName: string}) {
+    const [originalDisplayName, setOriginalDisplayName] = useState(defaultDisplayName);
+    const [editedDisplayName, setEditedDisplayName] = useState(defaultDisplayName);
+    return <Card>
+        <CardHeader>
+            <CardTitle>Set Display Name</CardTitle>
+            <CardDescription>Set the Display Name for your user</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Input placeholder="Display Name" value={editedDisplayName} onChange={(e) => setEditedDisplayName(e.target.value)} />
+        </CardContent>
+        <CardFooter style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: "10px"}}>
+            <Button variant="outline" disabled={editedDisplayName === originalDisplayName} onClick={() => {
+                setDisplayName(editedDisplayName).then(() => {
+                    setOriginalDisplayName(editedDisplayName);
+                });
+            }}><SaveIcon size={20} />Save</Button>
+            <Button variant="outline"><XIcon size={20} />Remove</Button>
+        </CardFooter>
+    </Card>
+}
+
+export function SetPassword() {
+    const [editedPassword, setEditedPasword] = useState("");
+    return <Card>
+        <CardHeader>
+            <CardTitle>Set Password</CardTitle>
+            <CardDescription>Set the password for your user</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Input type="password" placeholder="Password" value={editedPassword} onChange={(e) => setEditedPasword(e.target.value)} />
+        </CardContent>
+        <CardFooter style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: "10px"}}>
+            <Button variant="outline" onClick={() => {
+                setPassword(editedPassword).then((data) => {
+                    if (!data.error) {
+                        setEditedPasword("");
+                        toast("Password set successfully", {
+                            description: "Your password has been set successfully",
+                        })
+                    }
+                })
+            }}><SaveIcon size={20} />Save</Button>
         </CardFooter>
     </Card>
 }

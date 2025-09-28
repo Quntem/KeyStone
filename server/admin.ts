@@ -2,7 +2,7 @@ import express from "express";
 
 var router = express.Router();
 
-import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername } from "../functions.ts";
+import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain } from "../functions.ts";
 import { requireAuth, requireRole } from "../webfunctions.ts";
 
 router.use(express.json());
@@ -46,8 +46,28 @@ router.get("/user/username/:username", requireAuth({redirectTo: "/auth/signin"})
 
 router.post("/user", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        var user = await createUser({email: req.body.email, password: req.body.password, name: req.body.name, tenantId: req.auth.tenantId, username: req.body.username, role: req.body.role});
+        var user = await createUser({email: req.body.email, password: req.body.password, name: req.body.name, tenantId: req.auth.tenantId, username: req.body.username, role: req.body.role, domainId: req.body.domainId});
         res.json(user);
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.patch("/user/:id", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var user = await updateUser({id: req.params.id, name: req.body.name, email: req.body.email, username: req.body.username, role: req.body.role, domainId: req.body.domainId});
+        res.json(user);
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.post("/user/:id/setpassword", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        await SetUserPassword({userId: req.params.id, password: req.body.password});
+        res.json({success: true});
     } catch (e) {
         console.log(e);
         res.status(400).json({error: e.message});
@@ -134,6 +154,69 @@ router.post("/app/:id/userappaccess", requireAuth({redirectTo: "/auth/signin"}),
     try {
         var app = await grantUserAppAccess({userId: req.body.userId, appId: req.params.id});
         res.json(app);
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.delete("/app/:id/userappaccess/:userAppAccessId", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        const userAppAccess = await getUserAppAccess({id: req.params.userAppAccessId});
+        if (!userAppAccess) {
+            res.status(404).json({error: "User app access not found"});
+            return;
+        }
+        if (userAppAccess.app.tenantId !== req.auth.tenantId) {
+            res.status(400).json({error: "User app access does not belong to this tenant"});
+            return;
+        }
+        if (userAppAccess.app.id !== req.params.id) {
+            res.status(400).json({error: "User app access does not belong to this app"});
+            return;
+        }
+        await revokeUserAppAccess({id: req.params.userAppAccessId});
+        res.json({success: true});
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.post("/domain", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var domain = await createDomain({name: req.body.domain, creatorId: req.auth.userId, tenantId: req.auth.tenantId});
+        res.json(domain);
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.delete("/domain/:id", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        await deleteDomain({id: req.params.id});
+        res.json({success: true});
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.get("/domains", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var domains = await listDomains({tenantId: req.auth.tenantId});
+        res.json(domains);
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.get("/domain/:id/verify", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var domain = await verifyDomain({domainId: req.params.id});
+        res.json(domain);
     } catch (e) {
         console.log(e);
         res.status(400).json({error: e.message});

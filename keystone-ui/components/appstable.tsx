@@ -1,5 +1,5 @@
 "use client"
-import { AddUserToApp, CreateApp, getUserByUsername, useAdminAppsList, useTenantsList, useUsersList } from "@/lib/admin";
+import { AddUserToApp, CreateApp, getUserByUsername, removeUserFromApp, updateApp, useAdminAppsList, useTenantsList, useUsersList } from "@/lib/admin";
 import { useReactTable, getCoreRowModel, ColumnDef, flexRender, Row } from "@tanstack/react-table";
 import {
     Table,
@@ -22,10 +22,11 @@ import {
 } from "@/components/ui/drawer"
 import { Separator } from "@/components/ui/separator";
 import { Button } from "./ui/button";
-import { CheckIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
+import { CheckIcon, PlusIcon, SaveIcon, SearchIcon, XIcon } from "lucide-react";
 import { InputField, PrefixedInput } from "./userstable";
 import { useSession } from "@/lib/auth";
 import { UserItem } from "./header";
+import { ConfirmDialog } from "./confirmDialog";
 
 export function AppsTable({appsListHook}: {appsListHook: any}) {
     const [apps, setApps] = useState<any>([]);
@@ -100,9 +101,13 @@ const TableRowWithDrawer = ({row, appsListHook}: {row: Row<any>, appsListHook: a
 
 function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOpen: (open: boolean) => void, app: any, appsListHook: any}) {
     const [userAppAccess, setUserAppAccess] = useState<any>(app.userAppAccess);
+    const [name, setName] = useState(app.name);
+    const [description, setDescription] = useState(app.description);
+    const [logo, setLogo] = useState(app.logo);
+    const [mainUrl, setMainUrl] = useState(app.mainUrl);
     const session = useSession();
     return (
-        <Drawer direction="right" open={open} onOpenChange={setOpen} onClose={() => {
+        <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen} onClose={() => {
             if (userAppAccess.length > app.userAppAccess.length || userAppAccess.length < app.userAppAccess.length) {
                 setTimeout(() => {
                     appsListHook.reload();
@@ -116,6 +121,32 @@ function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOp
                 </DrawerHeader>
                 <Separator />
                 <div className="drawer-mainarea">
+                    <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>App Options</div>
+                    <InputField label="Name" value={name} setValue={setName} />
+                    <InputField label="Description" value={description} setValue={setDescription} />
+                    <InputField label="Logo" value={logo} setValue={setLogo} />
+                    <InputField label="Main URL" value={mainUrl} setValue={setMainUrl} />
+
+                    <div className="p-[20px_20px_0px_20px] flex flex-row gap-2 items-center justify-end">
+                        <Button variant="outline" disabled={name === app.name && description === app.description && logo === app.logo && mainUrl === app.mainUrl} onClick={() => {
+                            setLogo(app.logo);
+                            setName(app.name);
+                            setDescription(app.description);
+                            setMainUrl(app.mainUrl);
+                        }}><XIcon size={20} />Discard Changes</Button>
+                        <Button disabled={name === app.name && description === app.description && logo === app.logo && mainUrl === app.mainUrl} onClick={() => {
+                            updateApp({appId: app.id, name, description, logo, mainUrl}).then(() => {
+                                setOpen(false);
+                                setTimeout(() => {
+                                    appsListHook.reload();
+                                }, 1000);
+                            });
+                        }}><SaveIcon size={20} />Save</Button>
+                    </div>
+
+                    <Separator style={{marginTop: "25px"}} />
+
+                    <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>App Access</div>
                     <UserSearchInput onUserSelect={(user) => {
                         AddUserToApp({userId: user.id, appId: app.id}).then((data) => {
                             setUserAppAccess([...userAppAccess, data]);
@@ -124,8 +155,8 @@ function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOp
                         
                     <div style={{margin: "20px 20px 0px 20px"}}>
                         <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>Users with access</div>
-                        <div className="p-3 flex flex-col gap-3 shadow-sm rounded-md bg-card">{userAppAccess?.map((userAppAccess: any) => (
-                            <UserAppAccessRow key={userAppAccess.id} userAppAccess={userAppAccess} />
+                        <div className="p-3 flex flex-col gap-3 shadow-sm rounded-md bg-card">{userAppAccess?.map((userAppAccessItem: any) => (
+                            <UserAppAccessRow key={userAppAccessItem.id} userAppAccess={userAppAccessItem} setUserAppAccess={setUserAppAccess} userAppAccessList={userAppAccess} appId={app.id} />
                         ))}</div>
                     </div>
                 </div>
@@ -138,12 +169,22 @@ function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOp
     );
 }
 
-function UserAppAccessRow({userAppAccess}: {userAppAccess: any}) {
+function UserAppAccessRow({userAppAccess, setUserAppAccess, userAppAccessList, appId}: {userAppAccess: any, setUserAppAccess: (userAppAccess: any) => void, userAppAccessList: any, appId: string}) {
+    const [confirmOpen, setConfirmOpen] = useState(false);
     return (
         <UserItem user={userAppAccess.user} Extra={
-            <Button variant="outline" onClick={() => {
-                RemoveUserFromApp({userId: userAppAccess.user.id, appId: userAppAccess.app.id});
-            }}><XIcon size={20} /></Button>
+            <>
+                <ConfirmDialog title="Remove User" description="Are you sure you want to remove this user from the app?" isOpen={confirmOpen} onConfirm={() => {
+                    removeUserFromApp({accessId: userAppAccess.id, appId}).then(() => {
+                        setUserAppAccess(userAppAccessList.filter((userAppAccessItem: any) => userAppAccessItem.id !== userAppAccess.id));
+                    });
+                }} onClose={() => {
+                    setConfirmOpen(false);
+                }} />
+                <Button variant="outline" onClick={() => {
+                    setConfirmOpen(true);
+                }}><XIcon size={20} /></Button>
+            </>
         } />
     );
 }
@@ -154,7 +195,7 @@ export function AddAppDrawer({open, setOpen, appsListHook}: {open: boolean, setO
     const [logo, setLogo] = useState("");
     const [mainUrl, setMainUrl] = useState("");
     return (
-        <Drawer direction="right" open={open} onOpenChange={setOpen}>
+        <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen}>
             <DrawerTrigger asChild>
                 <Button variant="outline"><PlusIcon size={20} />Add App</Button>
             </DrawerTrigger>

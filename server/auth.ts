@@ -1,7 +1,8 @@
 import express from "express";
-import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions, deleteSession, listUserAppAccess, listAppSessions, createAppSession } from "../functions.ts";
+import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions, deleteSession, listUserAppAccess, listAppSessions, createAppSession, getUserIdByEmail, createTenant, createUser, getDomainByName, createDomain, updateDomain, updateUser, SetUserPassword } from "../functions.ts";
 import bodyParser from "body-parser";
 import { requireAuth } from "../webfunctions.ts";
+import isEmail from "is-email";
 
 var router = express.Router();
 
@@ -18,28 +19,38 @@ router.get("/userblocked", async (req: any, res: any) => {
 });
 
 router.post("/signin", bodyParser.urlencoded({ extended: true }), async (req: any, res: any) => {
-    var tenantName = req.body.username.split("/")[0];
-    var username = req.body.username.split("/")[1];
-    var tenant = await getTenantByName({name: tenantName});
-    if (!tenant) {
-        res.redirect("/auth/signin");
-        return;
+    if (isEmail(req.body.username)) {
+        var userId = await getUserIdByEmail({email: req.body.username});
+        
+    } else {
+        var tenantName = req.body.username.split("/")[0];
+        var username = req.body.username.split("/")[1];
+        var tenant = await getTenantByName({name: tenantName});
+        if (!tenant) {
+            res.redirect("/auth/signin");
+            return;
+        }
+        var userId = await getUserIdByUsername({tenantId: tenant.id, username});
     }
-    var userId = await getUserIdByUsername({tenantId: tenant.id, username});
     if (!userId) {
-        res.redirect("/auth/signin");
+        res.redirect("/auth/signin" + (req.body.redirectTo ? "?redirectTo=" + req.body.redirectTo : "") + "&error=Invalid username or password");
         return;
     }
     const user = await getUserById({id: userId.id});
     if (!user) {
-        res.redirect("/auth/signin");
+        res.redirect("/auth/signin" + (req.body.redirectTo ? "?redirectTo=" + req.body.redirectTo : "") + "&error=Invalid username or password");
         return;
     }
     if (user.disabled) {
         res.redirect("/auth/userblocked");
         return;
     }
-    var session = await createSession({userId: userId.id, password: req.body.password});
+    try {
+        var session = await createSession({userId: userId.id, password: req.body.password});
+    } catch (error) {
+        res.redirect("/auth/signin" + (req.body.redirectTo ? "?redirectTo=" + req.body.redirectTo : "") + "&error=Invalid username or password");
+        return;
+    }
     const appSessions = await listUserAppAccess({userId: userId.id});
     for (const appSession of appSessions) {
         await createAppSession({userAppAccessId: appSession.id, sessionId: session.id});
@@ -57,6 +68,11 @@ router.get("/ui/showsessiontoken", requireAuth({redirectTo: "/auth/signin"}), as
 router.get("/logout", requireAuth({redirectTo: "/auth/signin"}), async (req: any, res: any) => {
     res.cookie("sessionId", "", { expires: new Date(0), sameSite: "lax" });
     res.redirect(req.query.redirectTo || "/auth/signin");
+});
+
+router.get("/tenantexists", async (req: any, res: any) => {
+    var tenant = await getTenantByName({name: req.query.tenantName});
+    res.json({exists: !!tenant});
 });
 
 router.get("/getsession", requireAuth({redirectTo: "/auth/signin"}), async (req: any, res: any) => {
@@ -84,6 +100,26 @@ router.get("/gettenant", requireAuth({redirectTo: "/auth/signin"}), async (req: 
     }
     var tenant = await getTenantById({id: user.tenantId});
     res.json(tenant);
+});
+
+router.post("/setuserpassword", express.json(), requireAuth({redirectTo: "/auth/signin"}), async (req: any, res: any) => {
+    try {
+        var user = await SetUserPassword({userId: req.auth.id, password: req.body.password});
+        res.json(user);
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.patch("/userinfo", express.json(), requireAuth({redirectTo: "/auth/signin"}), async (req: any, res: any) => {
+    try {
+        var user = await updateUser({id: req.auth.id, name: req.body.name, email: req.auth.email, username: req.auth.username, role: req.auth.role, domainId: req.auth.domainId});
+        res.json(user);
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
 });
 
 router.get("/getsessions", requireAuth({redirectTo: "/auth/signin"}), async (req: any, res: any) => {
@@ -125,5 +161,27 @@ router.get("/apps", requireAuth({redirectTo: "/auth/signin"}), async (req: any, 
     var apps = await listUserAppAccess({userId: user.id});
     res.json(apps);
 });
+
+router.post("/setuptenant", express.json(), async (req: any, res: any) => {
+    var tenant = await createTenant({name: req.body.tenantName.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, "")});
+    var domain = await createDomain({name: req.body.domain, tenantId: tenant.id});
+    var user = await createUser({tenantId: tenant.id, username: req.body.username, email: req.body.email, password: req.body.password, name: req.body.name, role: "ADMIN", domainId: domain.id});
+    var session = await createSession({userId: user.id, password: req.body.password});
+    await updateDomain({id: domain.id, name: req.body.domain, creatorId: user.id, tenantId: tenant.id});
+    res.cookie("sessionId", session.id, {
+        sameSite: "lax",
+    });
+    res.json({success: true});
+})
+
+router.get("/emailexists", async (req: any, res: any) => {
+    var user = await getUserIdByEmail({email: req.query.email});
+    res.json({exists: !!user});
+})
+
+router.get("/domainexists", async (req: any, res: any) => {
+    var domain = await getDomainByName({name: req.query.domain});
+    res.json({exists: !!domain});
+})
 
 export {router}
