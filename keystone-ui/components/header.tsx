@@ -101,7 +101,7 @@ function HeaderUser() {
                     <UserItem user={session.data?.user} />
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="color-[var(--qu-text)]" onClick={() => {LogOut().then(() => {window.location.reload()})}}><LogOutIcon size={20}/>Logout</DropdownMenuItem>
+                <DropdownMenuItem className="color-[var(--qu-text)]" onClick={() => {LogOut().then(() => {window.location.href = process.env.NEXT_PUBLIC_API_URL + "/auth/signin?redirectTo=" + window.location.href})}}><LogOutIcon size={20}/>Logout</DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     );

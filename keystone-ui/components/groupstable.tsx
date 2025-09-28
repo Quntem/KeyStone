@@ -1,5 +1,5 @@
 "use client"
-import { AddUserToApp, CreateApp, getUserByUsername, removeUserFromApp, updateApp, useAdminAppsList, useTenantsList, useUsersList } from "@/lib/admin";
+import { AddUserToApp, addUserToGroup, CreateApp, CreateGroup, getUserByUsername, removeUserFromApp, removeUserFromGroup, updateApp, updateGroup, useAdminAppsList, useTenantsList, useUsersList } from "@/lib/admin";
 import { useReactTable, getCoreRowModel, ColumnDef, flexRender, Row } from "@tanstack/react-table";
 import {
     Table,
@@ -29,19 +29,23 @@ import { UserItem } from "./header";
 import { ConfirmDialog } from "./confirmDialog";
 import { CopyValueRow } from "./domainstable";
 
-export function AppsTable({appsListHook}: {appsListHook: any}) {
-    const [apps, setApps] = useState<any>([]);
+export function GroupsTable({groupsListHook}: {groupsListHook: any}) {
+    const [groups, setGroups] = useState<any>([]);
     useEffect(() => {
-        if (appsListHook.loaded) {
-            setApps(appsListHook.data?.map((app: any) => ({
-                ...app,
-                usersCount: app.userAppAccess?.length || 0,
+        if (groupsListHook.loaded) {
+            setGroups(groupsListHook.data?.map((group: any) => ({
+                ...group,
+                usersCount: group.users?.length || 0,
             })) || [])
         }
-    }, [appsListHook]);
+    }, [groupsListHook]);
     const table = useReactTable({
-        data: apps,
+        data: groups,
         columns: [
+            {
+                header: "Group Name",
+                accessorKey: "groupname",
+            },
             {
                 header: "Name",
                 accessorKey: "name",
@@ -57,7 +61,7 @@ export function AppsTable({appsListHook}: {appsListHook: any}) {
         ],
         getCoreRowModel: getCoreRowModel(),
     });
-    if (!appsListHook.loaded) {
+    if (!groupsListHook.loaded) {
         return <div>Loading...</div>;
     }
     return (
@@ -76,7 +80,7 @@ export function AppsTable({appsListHook}: {appsListHook: any}) {
                 </TableHeader>
                 <TableBody>
                     {table.getRowModel().rows.map((row) => (
-                        <TableRowWithDrawer key={row.id} row={row} appsListHook={appsListHook} />
+                        <TableRowWithDrawer key={row.id} row={row} groupsListHook={groupsListHook} />
                     ))}
                 </TableBody>
             </Table>
@@ -84,7 +88,7 @@ export function AppsTable({appsListHook}: {appsListHook: any}) {
     );
 }
 
-const TableRowWithDrawer = ({row, appsListHook}: {row: Row<any>, appsListHook: any}) => {
+const TableRowWithDrawer = ({row, groupsListHook}: {row: Row<any>, groupsListHook: any}) => {
     const [open, setOpen] = useState(false);
     return (
         <>
@@ -95,74 +99,70 @@ const TableRowWithDrawer = ({row, appsListHook}: {row: Row<any>, appsListHook: a
                     </TableCell>
                 ))}
             </TableRow>
-            <AppInfoDrawer open={open} setOpen={setOpen} app={row.original} appsListHook={appsListHook} />
+            <GroupInfoDrawer open={open} setOpen={setOpen} group={row.original} groupsListHook={groupsListHook} />
         </>
     );
 }
 
-function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOpen: (open: boolean) => void, app: any, appsListHook: any}) {
-    const [userAppAccess, setUserAppAccess] = useState<any>(app.userAppAccess);
+function GroupInfoDrawer({open, setOpen, group, groupsListHook}: {open: boolean, setOpen: (open: boolean) => void, group: any, groupsListHook: any}) {
+    const [users, setUsers] = useState<any>(group.users);
+    const [name, setName] = useState(group.name);
+    const [description, setDescription] = useState(group.description);
+    const [groupname, setGroupname] = useState(group.groupname);
     useEffect(() => {
-        setUserAppAccess(app.userAppAccess);
+        setUsers(group.users);
     }, [open]);
-    const [name, setName] = useState(app.name);
-    const [description, setDescription] = useState(app.description);
-    const [logo, setLogo] = useState(app.logo);
-    const [mainUrl, setMainUrl] = useState(app.mainUrl);
+    useEffect(() => {
+        const trimmedName = groupname.trim().toLowerCase();
+        const validName = trimmedName.replaceAll(/[^a-z0-9-_]/g, "");
+        setGroupname(validName);
+    }, [groupname]);
     const session = useSession();
     return (
         <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen} onClose={() => {
-            if (userAppAccess.length > app.userAppAccess.length || userAppAccess.length < app.userAppAccess.length) {
+            if (users.length > group.users.length || users.length < group.users.length) {
                 setTimeout(() => {
-                    appsListHook.reload();
+                    groupsListHook.reload();
                 }, 1000);
             }
         }}>
             <DrawerContent>
                 <DrawerHeader>
-                    <DrawerTitle>{app.name}</DrawerTitle>
-                    <DrawerDescription>Manage this app</DrawerDescription>
+                    <DrawerTitle>{group.name}</DrawerTitle>
+                    <DrawerDescription>Manage this group</DrawerDescription>
                 </DrawerHeader>
                 <Separator />
                 <div className="drawer-mainarea">
-                    <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>App Options</div>
+                    <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>Group Options</div>
+                    <PrefixedInput prefix={session?.data?.user?.tenant.name + "/"} label="Group Name" value={groupname} setValue={setGroupname} />
                     <InputField label="Name" value={name} setValue={setName} />
                     <InputField label="Description" value={description} setValue={setDescription} />
-                    <InputField label="Logo" value={logo} setValue={setLogo} />
-                    <InputField label="Main URL" value={mainUrl} setValue={setMainUrl} />
-                    <CopyValueRow title="App ID" value={app.id} />
-                    <CopyValueRow title="App Secret" value={app.secret} />
-
                     <div className="p-[20px_20px_0px_20px] flex flex-row gap-2 items-center justify-end">
-                        <Button variant="outline" disabled={name === app.name && description === app.description && logo === app.logo && mainUrl === app.mainUrl} onClick={() => {
-                            setLogo(app.logo);
-                            setName(app.name);
-                            setDescription(app.description);
-                            setMainUrl(app.mainUrl);
+                        <Button variant="outline" disabled={name === group.name && description === group.description && groupname === group.groupname} onClick={() => {
+                            setGroupname(group.groupname);
+                            setName(group.name);
+                            setDescription(group.description);
                         }}><XIcon size={20} />Discard Changes</Button>
-                        <Button disabled={name === app.name && description === app.description && logo === app.logo && mainUrl === app.mainUrl} onClick={() => {
-                            updateApp({appId: app.id, name, description, logo, mainUrl}).then(() => {
+                        <Button disabled={name === group.name && description === group.description && groupname === group.groupname} onClick={() => {
+                            updateGroup({groupId: group.id, name, description, groupname}).then(() => {
                                 setOpen(false);
                                 setTimeout(() => {
-                                    appsListHook.reload();
+                                    groupsListHook.reload();
                                 }, 1000);
                             });
                         }}><SaveIcon size={20} />Save</Button>
                     </div>
-
                     <Separator style={{marginTop: "25px"}} />
-
-                    <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>App Access</div>
+                    <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>Group Members</div>
                     <UserSearchInput onUserSelect={(user) => {
-                        AddUserToApp({userId: user.id, appId: app.id}).then((data) => {
-                            setUserAppAccess([...userAppAccess, data]);
+                        addUserToGroup({groupId: group.id, userId: user.id}).then((useritem) => {
+                            setUsers([...users, useritem]);
                         });
                     }} />
-                        
                     <div style={{margin: "20px 20px 0px 20px"}}>
                         <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>Users with access</div>
-                        <div className="p-3 flex flex-col gap-3 shadow-sm rounded-md bg-card">{userAppAccess?.map((userAppAccessItem: any) => (
-                            <UserAppAccessRow key={userAppAccessItem.id} userAppAccess={userAppAccessItem} setUserAppAccess={setUserAppAccess} userAppAccessList={userAppAccess} appId={app.id} />
+                        <div className="p-3 flex flex-col gap-3 shadow-sm rounded-md bg-card">{users?.map((userAppAccessItem: any) => (
+                            <UserGroupAccessRow key={userAppAccessItem.id} user={userAppAccessItem} users={users} setUsers={setUsers} />
                         ))}</div>
                     </div>
                 </div>
@@ -175,14 +175,14 @@ function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOp
     );
 }
 
-function UserAppAccessRow({userAppAccess, setUserAppAccess, userAppAccessList, appId}: {userAppAccess: any, setUserAppAccess: (userAppAccess: any) => void, userAppAccessList: any, appId: string}) {
+function UserGroupAccessRow({user, users, setUsers}: {user: any, users: any, setUsers: (users: any) => void}) {
     const [confirmOpen, setConfirmOpen] = useState(false);
     return (
-        <UserItem user={userAppAccess.user} Extra={
+        <UserItem user={user.user} Extra={
             <>
-                <ConfirmDialog title="Remove User" description="Are you sure you want to remove this user from the app?" isOpen={confirmOpen} onConfirm={() => {
-                    removeUserFromApp({accessId: userAppAccess.id, appId}).then(() => {
-                        setUserAppAccess(userAppAccessList.filter((userAppAccessItem: any) => userAppAccessItem.id !== userAppAccess.id));
+                <ConfirmDialog title="Remove User" description="Are you sure you want to remove this user from the group?" isOpen={confirmOpen} onConfirm={() => {
+                    removeUserFromGroup({groupId: user.groupId, userId: user.user.id}).then(() => {
+                        setUsers(users.filter((userAppAccessItem: any) => userAppAccessItem.id !== user.id));
                     });
                 }} onClose={() => {
                     setConfirmOpen(false);
@@ -195,35 +195,41 @@ function UserAppAccessRow({userAppAccess, setUserAppAccess, userAppAccessList, a
     );
 }
 
-export function AddAppDrawer({open, setOpen, appsListHook}: {open: boolean, setOpen: (open: boolean) => void, appsListHook: any}) {
+export function CreateGroupDrawer({open, setOpen, groupsListHook}: {open: boolean, setOpen: (open: boolean) => void, groupsListHook: any}) {
     const [name, setName] = useState("");
+    const [groupname, setGroupname] = useState("");
+    useEffect(() => {
+        const trimmedName = groupname.trim().toLowerCase();
+        const validName = trimmedName.replaceAll(/[^a-z0-9-_]/g, "");
+        setGroupname(validName);
+    }, [groupname]);
     const [description, setDescription] = useState("");
-    const [logo, setLogo] = useState("");
-    const [mainUrl, setMainUrl] = useState("");
+    const session = useSession();
     return (
         <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen}>
             <DrawerTrigger asChild>
-                <Button variant="outline"><PlusIcon size={20} />Add App</Button>
+                <Button variant="outline"><PlusIcon size={20} />Create Group</Button>
             </DrawerTrigger>
             <DrawerContent>
                 <DrawerHeader>
-                    <DrawerTitle style={{color: "var(--qu-text)", fontWeight: "500"}}>Add App</DrawerTitle>
+                    <DrawerTitle style={{color: "var(--qu-text)", fontWeight: "500"}}>Create Group</DrawerTitle>
                 </DrawerHeader>
                 <Separator />
                 <div className="drawer-mainarea">
-                    <InputField label="Logo URL" value={logo} setValue={setLogo} />
-                    <InputField label="Name" value={name} setValue={setName} />
+                    <PrefixedInput prefix={session?.data?.user?.tenant.name + "/"} label="Name" value={groupname} setValue={setGroupname} />
+                    <InputField label="Display Name" value={name} setValue={setName} />
                     <InputField label="Description" value={description} setValue={setDescription} />
-                    <InputField label="Main URL" value={mainUrl} setValue={setMainUrl} />
                 </div>
                 <Separator />
                 <DrawerFooter style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end"}}>
                     <Button variant="outline" onClick={() => setOpen(false)}><XIcon size={20} />Cancel</Button>
                     <Button onClick={async () => {
-                        await CreateApp({name, description, logo, mainUrl});
+                        await CreateGroup({name, description, groupname});
                         setOpen(false);
-                        appsListHook.reload();
-                    }}><CheckIcon size={20} />Add</Button>
+                        setTimeout(() => {
+                            groupsListHook.reload();
+                        }, 1000);
+                    }}><CheckIcon size={20} />Create</Button>
                 </DrawerFooter>
             </DrawerContent>
         </Drawer>

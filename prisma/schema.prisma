@@ -55,13 +55,18 @@ model tenant {
   tenantChildren tenant[] @relation(name: "tenantChildren")
   apps app[]
   domains domain[] @relation(name: "tenantDomains")
+  groups group[]
 }
 
 model group {
   id    String @id @default(cuid())
-  name  String @unique
+  name  String
+  description String?
+  groupname String @unique
   users groupUser[]
   type GroupType @default(Organizational)
+  tenantId String
+  tenant tenant @relation(fields: [tenantId], references: [id])
 }
 
 enum GroupType {
@@ -75,6 +80,7 @@ model groupUser {
   groupId String
   user User @relation(fields: [userId], references: [id])
   group group @relation(fields: [groupId], references: [id])
+  @@unique([userId, groupId])
 }
 
 model session {
@@ -88,6 +94,7 @@ model session {
 
 model app {
     id    String @id @default(cuid())
+    secret String @default(cuid())
     logo String
     description String
     name  String @unique
@@ -107,6 +114,7 @@ model userAppAccess {
     user User @relation(fields: [userId], references: [id])
     app app @relation(fields: [appId], references: [id])
     appSessions userAppSession[]
+    @@unique([userId, appId])
 }
 
 model userAppSession {
@@ -117,6 +125,7 @@ model userAppSession {
     userAppAccess userAppAccess @relation(fields: [userAppAccessId], references: [id], onDelete: Cascade)
     sessionId String
     session session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+    @@unique([userAppAccessId, sessionId])
 }
 
 model domain {

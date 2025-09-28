@@ -3,8 +3,14 @@ import { createSession, getUserIdByUsername, getTenantByName, getSession, getUse
 import bodyParser from "body-parser";
 import { requireAuth } from "../webfunctions.ts";
 import isEmail from "is-email";
+import cors from "cors";
 
 var router = express.Router();
+
+router.use(cors({
+    credentials: true,
+    origin: process.env.FRONTEND_URL,
+}));
 
 router.get("/signin", async (req: any, res: any) => {
     if (req.cookies?.sessionId) {
@@ -56,7 +62,8 @@ router.post("/signin", bodyParser.urlencoded({ extended: true }), async (req: an
         await createAppSession({userAppAccessId: appSession.id, sessionId: session.id});
     }
     res.cookie("sessionId", session.id, {
-        sameSite: "lax",
+        sameSite: "none",
+        secure: true,
     });
     res.redirect(req.body.redirectTo || "/auth/ui/showsessiontoken");
 });
@@ -66,7 +73,11 @@ router.get("/ui/showsessiontoken", requireAuth({redirectTo: "/auth/signin"}), as
 });
 
 router.get("/logout", requireAuth({redirectTo: "/auth/signin"}), async (req: any, res: any) => {
-    res.cookie("sessionId", "", { expires: new Date(0), sameSite: "lax" });
+    await deleteSession({sessionId: req.cookies.sessionId});
+    res.clearCookie("sessionId", {
+        sameSite: "none",
+        secure: true,
+    });
     res.redirect(req.query.redirectTo || "/auth/signin");
 });
 

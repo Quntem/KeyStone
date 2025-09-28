@@ -1,11 +1,16 @@
 import express from "express";
-
+import cors from "cors";
 var router = express.Router();
 
-import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain } from "../functions.ts";
+import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup } from "../functions.ts";
 import { requireAuth, requireRole } from "../webfunctions.ts";
 
 router.use(express.json());
+
+router.use(cors({
+    credentials: true,
+    origin: process.env.FRONTEND_URL,
+}));
 
 router.get("/users", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
     var users = await listTenantUsers({tenantId: req.auth.tenantId})
@@ -217,6 +222,66 @@ router.get("/domain/:id/verify", requireAuth({redirectTo: "/auth/signin"}), requ
     try {
         var domain = await verifyDomain({domainId: req.params.id});
         res.json(domain);
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.get("/groups", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var groups = await listGroups({tenantId: req.auth.tenantId});
+        res.json(groups);
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.post("/group", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var group = await createGroup({tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, "")});
+        res.json(group);
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.delete("/group/:id", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        await deleteGroup({id: req.params.id});
+        res.json({success: true});
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.patch("/group/:id", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var group = await updateGroup({id: req.params.id, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, "")});
+        res.json(group);
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.post("/group/:id/user", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var groupUser = await addUserToGroup({userId: req.body.userId, groupId: req.params.id});
+        res.json(groupUser);
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.delete("/group/:id/user", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var groupUser = await removeUserFromGroup({userId: req.body.userId, groupId: req.params.id});
+        res.json(groupUser);
     } catch (e) {
         console.log(e);
         res.status(400).json({error: e.message});

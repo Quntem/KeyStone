@@ -1,5 +1,5 @@
 import express from "express";
-import { getSession, getUserById } from "./functions.ts";
+import { getAppById, getSession, getUserById } from "./functions.ts";
 
 export function requireRole(role: string) {
     return (req: any, res: any, next: any) => {
@@ -12,6 +12,14 @@ export function requireRole(role: string) {
         console.log("Role found");
         next();
     };
+}
+
+export function appAuth() {
+    return async (req: any, res: any, next: any) => {
+        const app = await getAppById({id: req.headers["x-app-id"] as string});
+        req.keystoneApp = app;
+        next();
+    }
 }
 
 export function requireAuth({redirectTo}: {redirectTo: string}) {

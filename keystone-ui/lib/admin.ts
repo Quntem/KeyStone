@@ -447,3 +447,142 @@ export function useDomainsList() {
     }, [domainsList.loaded]);
     return domainsList;
 }
+
+export function useGroupsList() {
+    const reload = () => {
+        setGroupsList({data: null, loaded: false, reload});
+    };
+    const [groupsList, setGroupsList] = useState({data: null, loaded: false, reload});
+    useEffect(() => {
+        if (!groupsList.loaded) {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/groups", {credentials: "include", redirect: "manual"}).then((res) => {
+                if (res.ok) {
+                    return res.json();
+                } else {
+                    console.log("unauthorized");
+                    return {error: {
+                        text: "Unauthorized",
+                        code: "Unauthorized",
+                        status: 401,
+                    }}
+                }
+            }).then((data) => {
+                setGroupsList({data: data, loaded: true, reload});
+            });
+        }
+    }, [groupsList.loaded]);
+    return groupsList;
+}
+
+export function CreateGroup({name, description, groupname}: {name: string, description: string, groupname: string}) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group", {
+            credentials: "include", 
+            redirect: "manual", 
+            method: "POST", 
+            body: JSON.stringify({name, description, groupname}),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {error: {
+                    text: "Failed to create group",
+                    code: "Failed to create group",
+                    status: 401,
+                }}
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function updateGroup({groupId, name, description, groupname}: {groupId: string, name: string, description: string, groupname: string}) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId, {
+            credentials: "include", 
+            redirect: "manual", 
+            method: "PATCH", 
+            body: JSON.stringify({name, description, groupname}),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {error: {
+                    text: "Failed to update group",
+                    code: "Failed to update group",
+                    status: 401,
+                }}
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function removeUserFromGroup({groupId, userId}: {groupId: string, userId: string}) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId + "/user/", {
+            credentials: "include", 
+            redirect: "manual", 
+            method: "DELETE", 
+            body: JSON.stringify({userId}),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {error: {
+                    text: "Failed to remove user from group",
+                    code: "Failed to remove user from group",
+                    status: 401,
+                }}
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function addUserToGroup({groupId, userId}: {groupId: string, userId: string}) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId + "/user/", {
+            credentials: "include", 
+            redirect: "manual", 
+            method: "POST", 
+            body: JSON.stringify({userId}),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {error: {
+                    text: "Failed to add user to group",
+                    code: "Failed to add user to group",
+                    status: 401,
+                }}
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+

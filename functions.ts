@@ -319,6 +319,17 @@ export function getAppById({id}: {id: string}) {
     });
 }
 
+export function userHasAppAccess({userId, appId}: {userId: string, appId: string}) {
+    return prisma.userAppAccess.findUnique({
+        where: {
+            userId_appId: {
+                appId,
+                userId,
+            },
+        },
+    });
+}
+
 export function listTenantApps({tenantId}: {tenantId: string}) {
     return prisma.app.findMany({
         where: {
@@ -557,3 +568,190 @@ export async function updateDomain({id, name, creatorId, tenantId}: {id: string,
         },
     });
 }
+
+export async function getAppSessionToken({appId, userId, sessionId}: {appId: string, userId: string, sessionId: string}) {
+    const appUserAccess = await userHasAppAccess({userId, appId});
+    if (!appUserAccess?.id) {
+        throw new Error("User app access not found");
+    }
+    return await prisma.userAppSession.findUnique({
+        where: {
+            userAppAccessId_sessionId: {
+                userAppAccessId: appUserAccess.id,
+                sessionId,
+            },
+        },
+        include: {
+            userAppAccess: {
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            name: true,
+                            email: true,
+                            role: true,
+                            groups: {
+                                include: {
+                                    group: true,
+                                },
+                            },
+                            tenant: true,
+                        },
+                    },
+                    app: true,
+                },
+            },
+        },
+    });
+}
+
+export async function getAppSessionTokenById({id}: {id: string}) {
+    return await prisma.userAppSession.findUnique({
+        where: {
+            id,
+        },
+        include: {
+            userAppAccess: {
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            name: true,
+                            email: true,
+                            role: true,
+                            groups: {
+                                include: {
+                                    group: true,
+                                },
+                            },
+                            tenant: true,
+                        },
+                    },
+                    app: true,
+                },
+            },
+        },
+    });
+}
+
+export async function listGroups({tenantId}: {tenantId: string}) {
+    return await prisma.group.findMany({
+        where: {
+            tenantId,
+        },
+        include: {
+            users: {
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            name: true,
+                            email: true,
+                            role: true,
+                            groups: true,
+                        },
+                    },
+                }
+            }
+        },
+    });
+}
+
+export async function createGroup({tenantId, name, description, groupname}: {tenantId: string, name: string, description?: string, groupname: string}) {
+    return await prisma.group.create({
+        data: {
+            name,
+            groupname,
+            description,
+            tenantId,
+        },
+    });
+}
+
+export async function updateGroup({id, name, description, groupname}: {id: string, name: string, description?: string, groupname: string}) {
+    return await prisma.group.update({
+        where: {
+            id,
+        },
+        data: {
+            name,
+            groupname,
+            description,
+        },
+    });
+}
+
+export async function deleteGroup({id}: {id: string}) {
+    return await prisma.group.delete({
+        where: {
+            id,
+        },
+    });
+}
+
+export function getGroupById({id}: {id: string}) {
+    return prisma.group.findUnique({
+        where: {
+            id,
+        },
+        include: {
+            users: {
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            name: true,
+                            email: true,
+                            role: true,
+                        },
+                    },
+                }
+            },
+        },
+    });
+}
+
+export async function addUserToGroup({userId, groupId}: {userId: string, groupId: string}) {
+    return await prisma.groupUser.create({
+        data: {
+            userId,
+            groupId,
+        },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                },
+            },
+            group: {
+                select: {
+                    id: true,
+                    name: true,
+                    groupname: true,
+                    description: true,
+                },
+            },
+        },
+    });
+}
+
+export async function removeUserFromGroup({userId, groupId}: {userId: string, groupId: string}) {
+    return await prisma.groupUser.delete({
+        where: {
+            userId_groupId: {
+                groupId,
+                userId,
+            },
+        },
+    });
+}
+
+    

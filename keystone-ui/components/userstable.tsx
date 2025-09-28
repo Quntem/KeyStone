@@ -256,7 +256,7 @@ function UserQuickActions({user, usersListHook, setOpen}: {user: any, usersListH
             {!user.disabled && <div className={size.width < 500 ? "flex items-center flex-col gap-2 w-full" : "flex items-center flex-row gap-2 w-full"}>
                 <Button variant="outline" style={{flex: "1", width: size.width < 500 ? "100%" : "auto"}} onClick={() => setOpenPassword(true)}><KeyIcon size={20} /> Password</Button>
                 <Button variant="outline" style={{flex: "1", width: size.width < 500 ? "100%" : "auto"}} onClick={() => setConfirmDisable(true)}><XOctagonIcon size={20} /> Disable</Button>
-                <Button variant="outline" style={{flex: "1", width: size.width < 500 ? "100%" : "auto"}}><TrashIcon size={20} /> Delete</Button>
+                {/* <Button variant="outline" style={{flex: "1", width: size.width < 500 ? "100%" : "auto"}}><TrashIcon size={20} /> Delete</Button> */}
             </div>}
             {user.disabled && <div className="flex items-center flex-row gap-2 w-full">
                 <Button variant="outline" style={{flex: "1"}} onClick={() => setConfirmDisable(true)}><CheckIcon size={20} /> Enable</Button>
