@@ -7,7 +7,7 @@ export default function Home() {
   useEffect(() => {
     console.log(auth);
   }, [auth]);
-  if (!auth.user?.userAppAccess) {
+  if (!auth.data?.user) {
     return (
       <div>
         <h1 className="text-3xl font-bold underline">FAIL!</h1>
@@ -19,18 +19,29 @@ export default function Home() {
     <div>
       <h1 className="text-3xl font-bold underline">SUCCESS!</h1>
       <div>If you see this, it means that the authentication was successful</div>
-      <div>Welcome {auth?.user?.userAppAccess?.user?.name}</div>
-      <div>Email: {auth?.user?.userAppAccess?.user?.email}</div>
-      <div>Username: {auth?.user?.userAppAccess?.user?.username}</div>
-      <div>You are a {auth?.user?.userAppAccess?.user?.role} in {auth?.user?.userAppAccess?.user?.tenant?.name}</div>
-      <div>Tenant Logo: <img src={auth?.user?.userAppAccess?.user?.tenant?.logo} alt="Tenant Logo" /></div>
-      <div>Groups: {auth?.user?.userAppAccess?.user?.groups?.map((group) => group.group.name).join(", ")}</div>
-      <div>Your session started at {new Date(auth?.user?.createdAt).toLocaleString()}</div>
-      <div>You are using the app {auth?.user?.userAppAccess?.app?.name}</div>
-      <div>App Logo: <img src={auth?.user?.userAppAccess?.app?.logo} alt="App Logo" /></div>
-      <div>App Description: {auth?.user?.userAppAccess?.app?.description}</div>
-      <div>App URL: {auth?.user?.userAppAccess?.app?.mainUrl}</div>
+      <div>Welcome {auth?.data?.user?.name}</div>
+      <div>Email: {auth?.data?.user?.email}</div>
+      <div>Username: {auth?.data?.user?.username}</div>
+      <div>You are a {auth?.data?.user?.role} in {auth?.data?.user?.tenant?.name}</div>
+      <div>Tenant Logo: <img src={auth?.data?.user?.tenant?.logo} alt="Tenant Logo" /></div>
+      <div>Groups: {auth?.data?.user?.groups?.map((group) => group.group.name).join(", ")}</div>
+      <div>Your session started at {new Date(auth?.data?.createdAt).toLocaleString()}</div>
+      <div>You are using the app {auth?.data?.app?.name}</div>
+      <div>App Logo: <img src={auth?.data?.app?.logo} alt="App Logo" /></div>
+      <div>App Description: {auth?.data?.app?.description}</div>
+      <div>App URL: {auth?.data?.app?.mainUrl}</div>
       {/* <div>{JSON.stringify(auth)}</div> */}
+      <button onClick={() => {
+        fetch("/api", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + auth?.data?.sessionId,
+          },
+        }).then((res) => res.json()).then((res) => {
+          console.log(res);
+        });
+      }}>Test Request</button>
     </div>
   );
 }

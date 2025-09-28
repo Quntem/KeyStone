@@ -581,7 +581,10 @@ export async function getAppSessionToken({appId, userId, sessionId}: {appId: str
                 sessionId,
             },
         },
-        include: {
+        select: {
+            id: true,
+            userAppAccessId: true,
+            createdAt: true,
             userAppAccess: {
                 include: {
                     user: {
@@ -606,12 +609,15 @@ export async function getAppSessionToken({appId, userId, sessionId}: {appId: str
     });
 }
 
-export async function getAppSessionTokenById({id}: {id: string}) {
+export async function getAppSessionById({id}: {id: string}) {
     return await prisma.userAppSession.findUnique({
         where: {
             id,
         },
-        include: {
+        select: {
+            id: true,
+            userAppAccessId: true,
+            createdAt: true,
             userAppAccess: {
                 include: {
                     user: {

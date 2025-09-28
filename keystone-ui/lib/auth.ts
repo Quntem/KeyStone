@@ -5,7 +5,7 @@ export function useSession() {
     const reload = () => {
         setSession({data: null, loaded: false, reload});
     };
-    const [session, setSession] = useState({data: null, loaded: false, reload});
+    const [session, setSession] = useState<{data: {user: {name: string, username: string, email: string, role: string, tenant: {name: string, id: string}}, tenant: {name: string, id: string}}, loaded: boolean, reload: () => void} | {data: null, loaded: boolean, reload: () => void}>({data: null, loaded: false, reload});
     useEffect(() => {
         if (!session.loaded) {
             fetch(process.env.NEXT_PUBLIC_API_URL + "/auth/getsession", {credentials: "include", redirect: "manual"}).then((res) => {

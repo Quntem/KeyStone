@@ -1,5 +1,5 @@
 import express from "express";
-import { createAppSession, getAppById, getAppSessionToken, getAppSessionTokenById, getSession } from "../functions.ts";
+import { getAppSessionById, getAppSessionToken } from "../functions.ts";
 import { appAuth, requireAuth } from "../webfunctions.ts";
 import cors from "cors";
 
@@ -53,14 +53,18 @@ router.get("/getSessionToken", requireAuth({}), async (req: any, res: any) => {
     }
 });
 
-router.post("/app/:appId/verifySession", express.json(), async (req: any, res: any) => {
-    const app = await getAppById({id: req.params.appId});
-    if (!app || app.secret != req.headers["authorization"]?.split(" ")[1]) {
+router.post("/verifysession", async (req: any, res: any) => {
+    const app = req.app
+    if (!app || app.secret != req.headers["Authorization"]?.split(" ")[1]) {
+        console.log(app.secret != req.headers["Authorization"]?.split(" ")[1] ? "Invalid secret" : "Invalid app")
         res.status(401).json({error: "Not Valid"});
         return;
     }
-    const session = await getAppSessionTokenById({id: req.body.sessionId});
+    console.log(req.query.sessionId)
+    const session = await getAppSessionById({id: req.query.sessionId as string});
+    console.log(session)
     if (!session) {
+        console.log("Invalid session");
         res.status(401).json({error: "Not Valid"});
         return;
     }
