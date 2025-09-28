@@ -6,7 +6,9 @@
     "inquirer": "^12.9.3",
     "is-email": "^1.0.2",
     "oidc-provider": "^9.5.1",
-    "prisma": "^6.10.1"
+    "prisma": "^6.10.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5"
   },
   "type": "module",
   "devDependencies": {
