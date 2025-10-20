@@ -164,6 +164,34 @@ export function setTenantDescription(description: string) {
     });
 }
 
+export function setTenantDisplayName(displayName: string) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/tenant/displayname", {
+            credentials: "include", 
+            redirect: "manual", 
+            method: "POST", 
+            body: JSON.stringify({displayName}),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {error: {
+                    text: "Failed to set tenant display name",
+                    code: "Failed to set tenant display name",
+                    status: 401,
+                }}
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
 export function useAdminAppsList() {
     const reload = () => {
         setAppsList({data: null, loaded: false, reload});

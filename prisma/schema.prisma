@@ -43,6 +43,7 @@ model User {
 }
 
 model tenant {
+  displayName String?
   id    String @id @default(cuid())
   name  String @unique
   logo String?
@@ -56,6 +57,7 @@ model tenant {
   apps app[]
   domains domain[] @relation(name: "tenantDomains")
   groups group[]
+  externalAppAccess ExternalAppAccess[]
 }
 
 model group {
@@ -103,6 +105,20 @@ model app {
     tenant tenant @relation(fields: [tenantId], references: [id])
     userAppAccess userAppAccess[]
     mainUrl String
+    availableForExternal Boolean @default(false)
+    inExternalTenants ExternalAppAccess[]
+    publicExternal Boolean @default(false)
+}
+
+model ExternalAppAccess {
+    id    String @id @default(cuid())
+    appId String
+    app app @relation(fields: [appId], references: [id])
+    tenantId String
+    tenant tenant @relation(fields: [tenantId], references: [id])
+    expiresAt DateTime?
+    createdAt DateTime @default(now())
+    @@unique([appId, tenantId])
 }
 
 model userAppAccess {

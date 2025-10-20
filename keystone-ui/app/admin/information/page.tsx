@@ -1,7 +1,7 @@
 
 "use client"
 import { motion } from "framer-motion";
-import { SetLogo, SetName, SetDescription } from "@/components/infromationEdit";
+import { SetLogo, SetDescription, SetDisplayName } from "@/components/infromationEdit";
 import { useTenant } from "@/lib/auth";
 
 export default function UsersPage() {
@@ -16,6 +16,7 @@ export default function UsersPage() {
             </div>
             {tenant.data?.tenant && <div className="admin-page-content" style={{display: "flex", flexDirection: "column", gap: "20px"}}>
                 <SetLogo defaultLogo={tenant.data?.tenant?.logo || ""} />
+                <SetDisplayName defaultDisplayName={tenant.data?.tenant?.displayName || ""} />
                 <SetDescription defaultDescription={tenant.data?.tenant?.description || ""} />
             </div>}
         </motion.div>

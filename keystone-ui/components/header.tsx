@@ -9,6 +9,7 @@ import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { AdminSidebar, UserSidebar } from "./sidebar";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "./ui/button";
+import { Launcher } from "./launcher";
 
 export const Header = ({title}: {title: string}) => {
     const session = useSession();
@@ -25,8 +26,9 @@ export const Header = ({title}: {title: string}) => {
     }
     return (
         <header>
+            <Launcher />
             <SidebarDrawer open={open} onOpenChange={setOpen} />
-            {(size.width < 1024 && size.width != 0 && !path.startsWith("/apps")) ? <MenuIcon style={{cursor: "pointer", marginLeft: "15px"}} size="20" onClick={() => {setOpen(true)}} /> : session.data?.user?.tenant?.logo ? <><img src={session.data?.user?.tenant?.logo} className="header-logo" /><div className="header-logo-divider" /></> : null}
+            {(size.width < 1024 && size.width != 0 && !path.startsWith("/apps")) ? <MenuIcon style={{cursor: "pointer", marginLeft: "5px"}} size="20" onClick={() => {setOpen(true)}} /> : session.data?.user?.tenant?.logo ? <><img src={session.data?.user?.tenant?.logo} className="header-logo" /><div className="header-logo-divider" /></> : null}
             <div style={{width: "15px"}} />
             <HeaderDropdown user={session} title={title} />
             <div style={{flex: 1}} />

@@ -7,6 +7,7 @@ import { useSession, useTenant } from "@/lib/auth";
 import { usePathname, useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { useWindowSize } from "@/lib/screensize";
+import { info } from "@/lib/utils";
 
 export const UserSidebar = ({ignoreSize}: {ignoreSize?: boolean}) => {
     const session = useSession();
@@ -26,6 +27,8 @@ export const UserSidebar = ({ignoreSize}: {ignoreSize?: boolean}) => {
             <Separator style={{margin: "10px 0px"}} />
             <SidebarItem title="Your Apps" onClick={() => {router.push("/apps")}} Icon={LayoutGrid} active={false} index={4} />
             {session.data?.user?.role === "ADMIN" && <SidebarItem title="Admin" onClick={() => {router.push("/admin")}} Icon={SettingsIcon} active={false} index={5} />}
+            <Separator style={{margin: "10px 0px"}} />
+            <SidebarFooter index={session.data?.user?.role === "ADMIN" ? 6 : 5} />
         </div>
     );
 };
@@ -41,7 +44,7 @@ export const AdminSidebar = ({ignoreSize}: {ignoreSize?: boolean}) => {
     return (
         <div className="sidebar">
             <div className="sidebar-tenant-name">
-                {tenant.data?.tenant?.name}
+                {tenant.data?.tenant?.displayName || tenant.data?.tenant?.name}
             </div>
             <SidebarItem title="Home" onClick={() => {router.push("/admin")}} Icon={HomeIcon} active={path === "/admin"} index={0} />
             <SidebarItem title="Information" onClick={() => {router.push("/admin/information")}} Icon={PenIcon} active={path === "/admin/information"} index={1} />
@@ -53,6 +56,8 @@ export const AdminSidebar = ({ignoreSize}: {ignoreSize?: boolean}) => {
             <Separator style={{margin: "10px 0px"}} />
             <SidebarItem title="Your Account" onClick={() => {router.push("/account")}} Icon={UserIcon} active={false} index={7} />
             <SidebarItem title="Your Apps" onClick={() => {router.push("/apps")}} Icon={LayoutGrid} active={false} index={8} />
+            <Separator style={{margin: "10px 0px"}} />
+            <SidebarFooter index={9} />
         </div>
     );
 };
@@ -89,3 +94,20 @@ function SidebarItem({title, onClick, Icon, active, index}: {title: string, onCl
         </motion.div>
     );
 }
+
+function SidebarFooter({index}: {index: number}) {
+    return (
+        <motion.div className="sidebar-footer" initial={{x: "-100%" }} animate={{x: "0%"}}  transition={{duration: 0.5, delay: index * 0.1}}>
+            <div className="sidebar-footer-text">
+                Quntem Keystone
+            </div>
+            <div className="sidebar-footer-version">
+                Version {info.version}
+            </div>
+            <div className="sidebar-footer-extrainfo">
+                <a href="https://github.com/quntem/keystone" target="_blank" style={{textDecoration: "underline"}} rel="noreferrer">GitHub</a>
+            </div>
+        </motion.div>
+    );
+}
+    

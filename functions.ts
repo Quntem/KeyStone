@@ -484,6 +484,17 @@ export async function setTenantDescription({id, description}: {id: string, descr
     });
 }
 
+export async function setTenantDisplayName({id, displayName}: {id: string, displayName: string}) {
+    return prisma.tenant.update({
+        where: {
+            id,
+        },
+        data: {
+            displayName,
+        },
+    });
+}
+
 export async function verifyDomain({domainId}: {domainId: string}) {
     const domain = await prisma.domain.findUnique({
         where: {

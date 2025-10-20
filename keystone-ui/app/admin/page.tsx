@@ -3,9 +3,11 @@ import { motion } from "framer-motion";
 import { useSession } from "@/lib/auth";
 import { useEffect } from "react";
 import { StatCard, StatsRow } from "@/components/statcard";
-import { Users, Layers3, AppWindow, Globe } from "lucide-react";
+import { Users, Layers3, AppWindow, Globe, TriangleAlertIcon, GlobeIcon } from "lucide-react";
 import { useUsersList, useGroupsList, useAdminAppsList, useDomainsList } from "@/lib/admin";
 import { useRouter } from "next/navigation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 export default function AdminPage() {
     const session = useSession();
     const users = useUsersList();
@@ -13,6 +15,9 @@ export default function AdminPage() {
     const apps = useAdminAppsList();
     const domains = useDomainsList();
     const router = useRouter();
+    useEffect(() => {
+        console.log(domains.data)
+    }, [domains]);
     useEffect(() => {
         if (session.data?.user?.role !== "ADMIN" && session.data?.user) {
             window.location.href = "/account";
@@ -46,6 +51,11 @@ export default function AdminPage() {
                     }} title="Domains" value={domainsCount} icon={<Globe size={20} />} />
                 </StatsRow>
             </div>
+            {domains.data?.some((domain) => !domain.verified) && <Alert className="mt-4">
+                <TriangleAlertIcon size={20} />
+                <AlertTitle>Unverified Domains</AlertTitle>
+                <AlertDescription>One or more domains are not verified. Please verify them in the domains page. You will not be able to create new users on an unverified domain.</AlertDescription>
+            </Alert>}
         </motion.div>
     )
 }

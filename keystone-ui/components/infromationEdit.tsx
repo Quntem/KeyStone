@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { SaveIcon, XIcon } from "lucide-react";
 import { Input } from "./ui/input";
 import { useState } from "react";
-import { setTenantDescription, setTenantLogo } from "@/lib/admin";
+import { setTenantDescription, setTenantDisplayName, setTenantLogo } from "@/lib/admin";
 import { setDisplayName, setPassword } from "@/lib/auth";
 import { toast } from "sonner";
 export function SetLogo({defaultLogo}: {defaultLogo: string}) {
@@ -42,6 +42,24 @@ export function SetName({defaultName}: {defaultName: string}) {
     </Card>
 }
 
+export function SetDisplayName({defaultDisplayName}: {defaultDisplayName: string}) {
+    const [originalDisplayName, setOriginalDisplayName] = useState(defaultDisplayName);
+    const [displayName, setDisplayName] = useState(defaultDisplayName);
+    return <Card>
+        <CardHeader>
+            <CardTitle>Set Display Name</CardTitle>
+            <CardDescription>Set the display name for your tenant</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Input placeholder="Display Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+        </CardContent>
+        <CardFooter style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: "10px"}}>
+            <Button variant="outline" disabled={displayName === originalDisplayName} onClick={() => {setTenantDisplayName(displayName).then(() => {setOriginalDisplayName(displayName)});}}><SaveIcon size={20} />Save</Button>
+            <Button variant="outline" onClick={() => setDisplayName("")}><XIcon size={20} />Remove</Button>
+        </CardFooter>
+    </Card>
+}
+
 export function SetDescription({defaultDescription}: {defaultDescription: string}) {
     const [originalDescription, setOriginalDescription] = useState(defaultDescription);
     const [description, setDescription] = useState(defaultDescription);
@@ -56,28 +74,6 @@ export function SetDescription({defaultDescription}: {defaultDescription: string
         <CardFooter style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: "10px"}}>
             <Button variant="outline" disabled={description === originalDescription} onClick={() => {setTenantDescription(description).then(() => {setOriginalDescription(description)});}}><SaveIcon size={20} />Save</Button>
             <Button variant="outline" onClick={() => setDescription("")}><XIcon size={20} />Remove</Button>
-        </CardFooter>
-    </Card>
-}
-
-export function SetDisplayName({defaultDisplayName}: {defaultDisplayName: string}) {
-    const [originalDisplayName, setOriginalDisplayName] = useState(defaultDisplayName);
-    const [editedDisplayName, setEditedDisplayName] = useState(defaultDisplayName);
-    return <Card>
-        <CardHeader>
-            <CardTitle>Set Display Name</CardTitle>
-            <CardDescription>Set the Display Name for your user</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <Input placeholder="Display Name" value={editedDisplayName} onChange={(e) => setEditedDisplayName(e.target.value)} />
-        </CardContent>
-        <CardFooter style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: "10px"}}>
-            <Button variant="outline" disabled={editedDisplayName === originalDisplayName} onClick={() => {
-                setDisplayName(editedDisplayName).then(() => {
-                    setOriginalDisplayName(editedDisplayName);
-                });
-            }}><SaveIcon size={20} />Save</Button>
-            <Button variant="outline"><XIcon size={20} />Remove</Button>
         </CardFooter>
     </Card>
 }

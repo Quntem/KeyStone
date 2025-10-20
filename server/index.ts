@@ -16,13 +16,13 @@ app.use("/admin", adminRouter);
 app.use("/app", appRouter);
 app.use("/static", express.static("./server/web/static"));
 
-app.listen(7045, () => {
-    console.log("Server started on port 7045");
-});
-
-// https.createServer({
-//     key: fs.readFileSync("./https/key.key"),
-//     cert: fs.readFileSync("./https/cert.crt")
-// }, app).listen(7045, () => {
+// app.listen(7045, () => {
 //     console.log("Server started on port 7045");
 // });
+
+https.createServer({
+    key: fs.readFileSync("./https/key.key"),
+    cert: fs.readFileSync("./https/cert.crt")
+}, app).listen(7045, () => {
+    console.log("Server started on port 7045");
+});
