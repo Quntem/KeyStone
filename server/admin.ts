@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 var router = express.Router();
 
-import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName } from "../functions.ts";
+import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant } from "../functions.ts";
 import { requireAuth, requireRole } from "../webfunctions.ts";
 
 router.use(express.json());
@@ -131,6 +131,11 @@ router.post("/tenant/displayname", requireAuth({redirectTo: "/auth/signin"}), re
 
 router.get("/apps", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
     var apps = await listTenantApps({tenantId: req.auth.tenantId})
+    apps.forEach((app) => {
+        if (app.tenantId !== req.auth.tenantId) {
+            app.secret = "";
+        }
+    });
     console.log("found apps");
     res.json(apps);
 });
@@ -147,7 +152,7 @@ router.post("/app", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMI
 
 router.post("/app/:id", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        var app = await updateApp({id: req.params.id, name: req.body.name, description: req.body.description, logo: req.body.logo, allowedURLs: req.body.allowedURLs, mainUrl: req.body.mainUrl});
+        var app = await updateApp({id: req.params.id, name: req.body.name, description: req.body.description, logo: req.body.logo, allowedURLs: req.body.allowedURLs, mainUrl: req.body.mainUrl, availableForExternal: req.body.availableForExternal});
         res.json(app);
     } catch (e) {
         console.log(e);
@@ -167,8 +172,26 @@ router.delete("/app/:id", requireAuth({redirectTo: "/auth/signin"}), requireRole
 
 router.post("/app/:id/userappaccess", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        var app = await grantUserAppAccess({userId: req.body.userId, appId: req.params.id});
-        res.json(app);
+        const app = await getAppById({id: req.params.id, includeExternal: true});
+        const user = await getUserById({id: req.body.userId});
+        if (!app) {
+            res.status(404).json({error: "App not found"});
+            return;
+        }
+        if (app.tenantId !== req.auth.tenantId && !app.inExternalTenants.some((ext) => ext.tenantId === req.auth.tenantId)) {
+            res.status(400).json({error: "App does not belong to this tenant"});
+            return;
+        }
+        if (!user) {
+            res.status(404).json({error: "User not found"});
+            return;
+        }
+        if (user.tenantId !== req.auth.tenantId) {
+            res.status(400).json({error: "User does not belong to this tenant"});
+            return;
+        }
+        const userAppAccess = await grantUserAppAccess({userId: req.body.userId, appId: req.params.id});
+        res.json(userAppAccess);
     } catch (e) {
         console.log(e);
         res.status(400).json({error: e.message});
@@ -178,12 +201,17 @@ router.post("/app/:id/userappaccess", requireAuth({redirectTo: "/auth/signin"}),
 router.delete("/app/:id/userappaccess/:userAppAccessId", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
         const userAppAccess = await getUserAppAccess({id: req.params.userAppAccessId});
+        const user = await getUserById({id: userAppAccess?.userId});
         if (!userAppAccess) {
             res.status(404).json({error: "User app access not found"});
             return;
         }
-        if (userAppAccess.app.tenantId !== req.auth.tenantId) {
-            res.status(400).json({error: "User app access does not belong to this tenant"});
+        if (!user) {
+            res.status(404).json({error: "User not found"});
+            return;
+        }
+        if (user.tenantId !== req.auth.tenantId) {
+            res.status(400).json({error: "User does not belong to this tenant"});
             return;
         }
         if (userAppAccess.app.id !== req.params.id) {
@@ -292,6 +320,33 @@ router.delete("/group/:id/user", requireAuth({redirectTo: "/auth/signin"}), requ
     try {
         var groupUser = await removeUserFromGroup({userId: req.body.userId, groupId: req.params.id});
         res.json(groupUser);
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.post("/acquireapp/:id", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var app = await getAppById({id: req.params.id});
+        if (!app || app.availableForExternal !== true) {
+            res.status(404).json({error: "App not found or not available for external use"});
+            return;
+        }
+        var appAccess = await AddTenantToApp({tenantId: req.auth.tenantId, appId: req.params.id});
+        res.json(appAccess);
+    } catch (e) {
+        console.log(e);
+        res.status(400).json({error: e.message});
+    }
+});
+
+router.post("/upgradetofulltenant", requireAuth({redirectTo: "/auth/signin"}), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        const domain = req.body.domain;
+        var newDomain = await createDomain({name: domain, creatorId: req.auth.userId, tenantId: req.auth.tenantId});
+        var tenant = await UpgradeToFullTenant({tenantId: req.auth.tenantId});
+        res.json(tenant);
     } catch (e) {
         console.log(e);
         res.status(400).json({error: e.message});

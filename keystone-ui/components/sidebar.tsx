@@ -1,5 +1,5 @@
 "use client";
-import { BuildingIcon, GlobeIcon, Grid2X2Icon, HomeIcon, IdCardLanyardIcon, LaptopMinimalIcon, LayoutGrid, LayoutGridIcon, PenIcon, SettingsIcon, ShieldIcon, UserIcon, UsersIcon } from "lucide-react";
+import { BuildingIcon, GlobeIcon, Grid2X2Icon, HomeIcon, IdCardLanyardIcon, LaptopMinimalIcon, LayoutDashboard, LayoutGrid, LayoutGridIcon, PenIcon, SettingsIcon, ShieldIcon, UserIcon, UsersIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -13,6 +13,7 @@ export const UserSidebar = ({ignoreSize}: {ignoreSize?: boolean}) => {
     const session = useSession();
     const router = useRouter();
     const path = usePathname();
+    const tenant = useTenant();
     const size = useWindowSize();
     if (!ignoreSize && (size.width < 1024 && size.width != 0)) {
         return null
@@ -25,8 +26,8 @@ export const UserSidebar = ({ignoreSize}: {ignoreSize?: boolean}) => {
             <SidebarItem title="Security" onClick={() => {router.push("/account/security")}} Icon={ShieldIcon} active={path === "/account/security"} index={2} />
             <SidebarItem title="Sessions" onClick={() => {router.push("/account/sessions")}} Icon={LaptopMinimalIcon} active={path === "/account/sessions"} index={3} />
             <Separator style={{margin: "10px 0px"}} />
-            <SidebarItem title="Your Apps" onClick={() => {router.push("/apps")}} Icon={LayoutGrid} active={false} index={4} />
-            {session.data?.user?.role === "ADMIN" && <SidebarItem title="Admin" onClick={() => {router.push("/admin")}} Icon={SettingsIcon} active={false} index={5} />}
+            {tenant.data?.tenant?.type === "Organization" && <SidebarItem title="Your Apps" onClick={() => {router.push("/apps")}} Icon={LayoutGrid} active={false} index={4} />}
+            {session.data?.user?.role === "ADMIN" && tenant.data?.tenant?.type === "Organization" ? <SidebarItem title="Admin" onClick={() => {router.push("/admin")}} Icon={SettingsIcon} active={false} index={5} /> : <SidebarItem title="Team Dashboard" onClick={() => {router.push("/team")}} Icon={LayoutDashboard} active={false} index={5} />}
             <Separator style={{margin: "10px 0px"}} />
             <SidebarFooter index={session.data?.user?.role === "ADMIN" ? 6 : 5} />
         </div>
@@ -58,6 +59,33 @@ export const AdminSidebar = ({ignoreSize}: {ignoreSize?: boolean}) => {
             <SidebarItem title="Your Apps" onClick={() => {router.push("/apps")}} Icon={LayoutGrid} active={false} index={8} />
             <Separator style={{margin: "10px 0px"}} />
             <SidebarFooter index={9} />
+        </div>
+    );
+};
+
+export const TeamSidebar = ({ignoreSize}: {ignoreSize?: boolean}) => {
+    const path = usePathname();
+    const router = useRouter();
+    const tenant = useTenant();
+    const size = useWindowSize();
+    if (!ignoreSize && (size.width < 1024 && size.width != 0)) {
+        return null
+    }
+    return (
+        <div className="sidebar">
+            {/* <div className="sidebar-tenant-name">
+                {tenant.data?.tenant?.displayName || tenant.data?.tenant?.name}
+            </div> */}
+            <SidebarItem title="Overview" onClick={() => {router.push("/team")}} Icon={HomeIcon} active={path === "/team"} index={0} />
+            <SidebarItem title="Users" onClick={() => {router.push("/team/users")}} Icon={IdCardLanyardIcon} active={path === "/team/users"} index={1} />
+            {/* <SidebarItem title="Groups" onClick={() => {router.push("/team/groups")}} Icon={UsersIcon} active={path === "/team/groups"} index={2} /> */}
+            <SidebarItem title="Apps" onClick={() => {router.push("/team/apps")}} Icon={LayoutGridIcon} active={path === "/team/apps"} index={2} />
+            <SidebarItem title="Settings" onClick={() => {router.push("/team/settings")}} Icon={SettingsIcon} active={path === "/team/settings"} index={3} />
+            {/* <Separator style={{margin: "10px 0px"}} /> */}
+            {/* <SidebarItem title="Your Account" onClick={() => {router.push("/account")}} Icon={UserIcon} active={false} index={7} />
+            <SidebarItem title="Your Apps" onClick={() => {router.push("/apps")}} Icon={LayoutGrid} active={false} index={8} /> */}
+            <Separator style={{margin: "10px 0px"}} />
+            <SidebarFooter index={4} />
         </div>
     );
 };

@@ -23,7 +23,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Button } from "./ui/button";
 import { CheckIcon, PlusIcon, SaveIcon, SearchIcon, XIcon } from "lucide-react";
-import { InputField, PrefixedInput } from "./userstable";
+import { InputField, PrefixedInput, SwitchInput } from "./userstable";
 import { useSession } from "@/lib/auth";
 import { UserItem } from "./header";
 import { ConfirmDialog } from "./confirmDialog";
@@ -109,6 +109,7 @@ function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOp
     const [description, setDescription] = useState(app.description);
     const [logo, setLogo] = useState(app.logo);
     const [mainUrl, setMainUrl] = useState(app.mainUrl);
+    const [availableForExternal, setAvailableForExternal] = useState(app.availableForExternal);
     const session = useSession();
     return (
         <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen} onClose={() => {
@@ -125,7 +126,9 @@ function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOp
                 </DrawerHeader>
                 <Separator />
                 <div className="drawer-mainarea">
+                    {app.tenantId === session.data?.user?.tenantId ? <>
                     <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>App Options</div>
+                    <div style={{fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)"}}>Basic Information about the app</div>
                     <InputField label="Name" value={name} setValue={setName} />
                     <InputField label="Description" value={description} setValue={setDescription} />
                     <InputField label="Logo" value={logo} setValue={setLogo} />
@@ -141,7 +144,7 @@ function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOp
                             setMainUrl(app.mainUrl);
                         }}><XIcon size={20} />Discard Changes</Button>
                         <Button disabled={name === app.name && description === app.description && logo === app.logo && mainUrl === app.mainUrl} onClick={() => {
-                            updateApp({appId: app.id, name, description, logo, mainUrl}).then(() => {
+                            updateApp({appId: app.id, name, description, logo, mainUrl, availableForExternal}).then(() => {
                                 setOpen(false);
                                 setTimeout(() => {
                                     appsListHook.reload();
@@ -149,10 +152,20 @@ function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOp
                             });
                         }}><SaveIcon size={20} />Save</Button>
                     </div>
-
+                    </> : <div>
+                        <div className="acquire-app-info" style={{marginTop: "20px"}}>
+                            <img src={app.logo} className="header-logo" />
+                            <div className="acquire-app-info-text">
+                                <div className="acquire-app-info-text-title">{app.name}</div>
+                                <div className="acquire-app-info-text-published">Published By {app.tenant?.displayName ? app.tenant?.displayName : app.tenant?.name}</div>
+                            </div>
+                        </div>
+                        <div className="acquire-app-info-description" style={{marginTop: "10px"}}>{app.description}</div>    
+                    </div>}
                     <Separator style={{marginTop: "25px"}} />
 
                     <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>App Access</div>
+                    <div style={{fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)"}}>Who can access this app</div>
                     <UserSearchInput onUserSelect={(user) => {
                         AddUserToApp({userId: user.id, appId: app.id}).then((data) => {
                             setUserAppAccess([...userAppAccess, data]);
@@ -165,6 +178,33 @@ function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOp
                             <UserAppAccessRow key={userAppAccessItem.id} userAppAccess={userAppAccessItem} setUserAppAccess={setUserAppAccess} userAppAccessList={userAppAccess} appId={app.id} />
                         ))}</div>
                     </div>
+                    {app.tenantId === session.data?.user?.tenantId ? <>
+                    <Separator style={{marginTop: "25px"}} />
+
+                    <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>App Visibility</div>
+                    <div style={{fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)"}}>Manage how external tenants can acquire this app</div>
+                    <SwitchInput label="Enable Public Link" value={availableForExternal} setValue={setAvailableForExternal} />
+                    {availableForExternal && <CopyValueRow title="Public Link" value={window.location.origin + "/acquireapp/" + app.id} />}
+
+                    <div className="p-[20px_20px_0px_20px] flex flex-row gap-2 items-center justify-end">
+                        <Button variant="outline" disabled={availableForExternal === app.availableForExternal} onClick={() => {
+                            setAvailableForExternal(app.availableForExternal);
+                        }}><XIcon size={20} />Discard Changes</Button>
+                        <Button disabled={availableForExternal === app.availableForExternal} onClick={() => {
+                            updateApp({appId: app.id, name, description, logo, mainUrl, availableForExternal}).then(() => {
+                                setOpen(false);
+                                setTimeout(() => {
+                                    appsListHook.reload();
+                                }, 1000);
+                            });
+                        }}><SaveIcon size={20} />Save</Button>
+                    </div>
+
+                    <Separator style={{marginTop: "25px"}} />
+
+                    <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>External Access</div>
+                    <div style={{fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)"}}>Manage which external tenants can access this app</div>
+                    </> : <></>}
                 </div>
                 <Separator />
                 <DrawerFooter style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end"}}>

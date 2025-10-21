@@ -1,5 +1,5 @@
 import express from "express";
-import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions, deleteSession, listUserAppAccess, listAppSessions, createAppSession, getUserIdByEmail, createTenant, createUser, getDomainByName, createDomain, updateDomain, updateUser, SetUserPassword } from "../functions.ts";
+import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions, deleteSession, listUserAppAccess, listAppSessions, createAppSession, getUserIdByEmail, createTenant, createUser, getDomainByName, createDomain, updateDomain, updateUser, SetUserPassword, getAppById } from "../functions.ts";
 import bodyParser from "body-parser";
 import { requireAuth } from "../webfunctions.ts";
 import isEmail from "is-email";
@@ -174,11 +174,21 @@ router.get("/apps", requireAuth({redirectTo: "/auth/signin"}), async (req: any, 
 });
 
 router.post("/setuptenant", express.json(), async (req: any, res: any) => {
-    var tenant = await createTenant({name: req.body.tenantName.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, "")});
+    var tenant = await createTenant({name: req.body.tenantName.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), type: "Organization"});
     var domain = await createDomain({name: req.body.domain, tenantId: tenant.id});
     var user = await createUser({tenantId: tenant.id, username: req.body.username, email: req.body.email, password: req.body.password, name: req.body.name, role: "ADMIN", domainId: domain.id});
     var session = await createSession({userId: user.id, password: req.body.password});
     await updateDomain({id: domain.id, name: req.body.domain, creatorId: user.id, tenantId: tenant.id});
+    res.cookie("sessionId", session.id, {
+        sameSite: "lax",
+    });
+    res.json({success: true});
+})
+
+router.post("/setupteam", express.json(), async (req: any, res: any) => {
+    var tenant = await createTenant({name: req.body.tenantName.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), type: "Team"});
+    var user = await createUser({tenantId: tenant.id, username: req.body.username, email: req.body.email, password: req.body.password, name: req.body.name, role: "ADMIN", domainId: undefined});
+    var session = await createSession({userId: user.id, password: req.body.password});
     res.cookie("sessionId", session.id, {
         sameSite: "lax",
     });
@@ -193,6 +203,24 @@ router.get("/emailexists", async (req: any, res: any) => {
 router.get("/domainexists", async (req: any, res: any) => {
     var domain = await getDomainByName({name: req.query.domain});
     res.json({exists: !!domain});
+})
+
+router.get("/publicapp/:appid", async (req: any, res: any) => {
+    var app = await getAppById({id: req.params.appid});
+    var tenant = await getTenantById({id: app.tenantId});
+    if (!app || app.availableForExternal == false || !tenant) {
+        res.status(404).json({error: "App not found or not available for external access"});
+        return;
+    }
+    res.json({
+        app,
+        tenant: {
+            name: tenant.name,
+            logo: tenant.logo,
+            description: tenant.description,
+            displayName: tenant.displayName,
+        }
+    });
 })
 
 export {router}

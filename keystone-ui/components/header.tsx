@@ -3,34 +3,79 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { LogOut, useSession } from "@/lib/auth";
 import { JSX, useEffect, useRef, useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { ChevronDownIcon, LayoutGrid, LogInIcon, LogOutIcon, MenuIcon, SettingsIcon, SparklesIcon, UserIcon } from "lucide-react";
+import { ArrowLeftIcon, ChevronDownIcon, LayoutGrid, LogInIcon, LogOutIcon, MenuIcon, SettingsIcon, SparklesIcon, UserIcon } from "lucide-react";
 import { useWindowSize } from "@/lib/screensize";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { AdminSidebar, UserSidebar } from "./sidebar";
-import { usePathname, useRouter } from "next/navigation";
+import { AdminSidebar, TeamSidebar, UserSidebar } from "./sidebar";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Launcher } from "./launcher";
+import { useTenant } from "@/lib/auth";
 
 export const Header = ({title}: {title: string}) => {
+    const session = useSession();
+    const router = useRouter();
+    const size = useWindowSize();
+    const [open, setOpen] = useState(false);
+    const path = usePathname();
+    const tenant = useTenant();
+    useEffect(() => {
+        if (session.data) {
+            console.log(session.data);
+        } else if (session.data?.error) {
+            if (session.loaded) {
+                window.location.href = process.env.NEXT_PUBLIC_API_URL + "/auth/signin?redirectTo=" + window.location.href;
+            }
+        }
+    }, [session]);
+    if (tenant.data?.tenant?.type == "Team" && !path.startsWith("/account")) {
+        router.push("/account");
+    }
+    return (
+        <header>
+            {/* {tenant.data?.tenant?.type === "Organization" ? <Launcher /> : null} */}
+            {tenant.data?.tenant?.logo && <div style={{width: "10px"}} />}
+            <SidebarDrawer open={open} onOpenChange={setOpen} />
+            {(size.width < 1024 && size.width != 0 && !path.startsWith("/apps")) ? <MenuIcon style={{cursor: "pointer", marginLeft: "5px"}} size="20" onClick={() => {setOpen(true)}} /> : tenant.data?.tenant?.logo ? <><img src={tenant.data?.tenant?.logo} className="header-logo" /><div className="header-logo-divider" /></> : null}
+            <div style={{width: "15px"}} />
+            {tenant.data?.tenant?.type === "Organization" ? <HeaderDropdown user={session} title={title} /> : <div className="header-title">{title}</div>}
+            <div style={{flex: 1}} />
+            <HeaderUser />
+        </header>
+    );
+};
+
+export const TeamHeader = ({title}: {title: string}) => {
+    const tenant = useTenant();
+    const router = useRouter();
+    useEffect(() => {
+        if (tenant.data?.tenant?.type != "Team" && tenant.loaded) {
+            router.push("/admin");
+        }
+    }, [tenant]);
     const session = useSession();
     const size = useWindowSize();
     const [open, setOpen] = useState(false);
     const path = usePathname();
+    const urlparams = useSearchParams();
     useEffect(() => {
-        if (session.data) {
+        if (session.data && !session.data.error) {
             console.log(session.data);
+        } else if (session.data?.error) {
+            if (session.loaded) {
+                window.location.href = process.env.NEXT_PUBLIC_API_URL + "/auth/signin?redirectTo=" + window.location.href;
+            }
         }
     }, [session]);
-    if(session.data?.error?.status === 401) {
-        window.location.href = process.env.NEXT_PUBLIC_API_URL + "/auth/signin?redirectTo=" + window.location.href;
-    }
     return (
         <header>
-            <Launcher />
+            {/* <Launcher /> */}
+            {urlparams.get("return") ? <Button onClick={() => {window.location.href = urlparams.get("return")}} size={"icon"} variant={"ghost"} style={{marginLeft: "10px"}}><ArrowLeftIcon size={20}/></Button> : null}
             <SidebarDrawer open={open} onOpenChange={setOpen} />
-            {(size.width < 1024 && size.width != 0 && !path.startsWith("/apps")) ? <MenuIcon style={{cursor: "pointer", marginLeft: "5px"}} size="20" onClick={() => {setOpen(true)}} /> : session.data?.user?.tenant?.logo ? <><img src={session.data?.user?.tenant?.logo} className="header-logo" /><div className="header-logo-divider" /></> : null}
+            {/* {(size.width < 1024 && size.width != 0 && !path.startsWith("/apps")) ? <MenuIcon style={{cursor: "pointer", marginLeft: "5px"}} size="20" onClick={() => {setOpen(true)}} /> : session.data?.user?.tenant?.logo ? <><img src={session.data?.user?.tenant?.logo} className="header-logo" /><div className="header-logo-divider" /></> : null} */}
             <div style={{width: "15px"}} />
-            <HeaderDropdown user={session} title={title} />
+            {/* <HeaderDropdown user={session} title={title} /> */}
+            <div className="header-title">{title}</div>
             <div style={{flex: 1}} />
             <HeaderUser />
         </header>
@@ -61,7 +106,7 @@ export function SidebarDrawer({open, onOpenChange}: {open: boolean, onOpenChange
     return (
         <Drawer direction="left" open={open} onOpenChange={onOpenChange}>
             <DrawerContent style={{width: "250px"}}>
-                {path.startsWith("/admin") ? <AdminSidebar ignoreSize /> : <UserSidebar ignoreSize />}
+                {path.startsWith("/admin") ? <AdminSidebar ignoreSize /> : path.startsWith("/team") ? <TeamSidebar ignoreSize /> : <UserSidebar ignoreSize />}
             </DrawerContent>
         </Drawer>
     );

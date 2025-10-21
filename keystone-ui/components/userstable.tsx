@@ -29,9 +29,12 @@ import { useSession } from "@/lib/auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import isEmail from "is-email";
 import { useWindowSize } from "@/lib/screensize";
+import { Switch } from "@/components/ui/switch";
+import { usePathname } from "next/navigation";
 
 export function UsersTable({usersListHook}: {usersListHook: any}) {
     const [users, setUsers] = useState([]);
+    const pathname = usePathname();
     useEffect(() => {
         if (usersListHook.loaded) {
             setUsers(usersListHook.data?.users.map((user: any) => ({
@@ -49,7 +52,7 @@ export function UsersTable({usersListHook}: {usersListHook: any}) {
       )
     const table = useReactTable({
         data: users,
-        columns: [
+        columns: pathname.startsWith("/admin") ? [
             {
                 id: "name",
                 header: "Name",
@@ -64,6 +67,27 @@ export function UsersTable({usersListHook}: {usersListHook: any}) {
                 id: "role",
                 header: "Type",
                 accessorKey: "role",
+            },
+            {
+                id: "email",
+                header: "Email",
+                accessorKey: "email",
+            },
+            {
+                id: "status",
+                header: "Status",
+                accessorKey: "disabledPretty",
+            },
+        ] : [
+            {
+                id: "name",
+                header: "Name",
+                accessorKey: "name",
+            },
+            {
+                id: "username",
+                header: "Username",
+                accessorKey: "usernameFull",
             },
             {
                 id: "email",
@@ -131,6 +155,7 @@ const TableRowWithDrawer = ({row, usersListHook}: {row: Row<any>, usersListHook:
 }
 
 export function UserInfoDrawer({open, setOpen, user, usersListHook}: {open: boolean, setOpen: (open: boolean) => void, user: any, usersListHook: any}) {
+    const pathname = usePathname();
     const [name, setName] = useState(user.name);
     const [username, setUsername] = useState(user.username);
     const [email, setEmail] = useState(user.email);
@@ -158,12 +183,12 @@ export function UserInfoDrawer({open, setOpen, user, usersListHook}: {open: bool
                         <PrefixedInput label="Username" value={username} setValue={setUsername} prefix={user.tenant?.name + "/"} />
                         {/* <SuffixedInput fitInput label="Email" value={email} setValue={setEmail} suffix="@quintiq.com" pattern="^[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*$" /> */}
                         {/* <InputField label="Email" value={email} setValue={setEmail} /> */}
-                        <EmailOwnedDomainInput label="Email" value={email} setValue={setEmail} domainId={domainId} setDomainId={setDomainId} />
-                        <SelectInput label="Role" value={role} setValue={setRole} options={[
+                        {pathname.startsWith("/admin") ? <EmailOwnedDomainInput label="Email" value={email} setValue={setEmail} domainId={domainId} setDomainId={setDomainId} /> : null}
+                        {pathname.startsWith("/admin") ? <SelectInput label="Role" value={role} setValue={setRole} options={[
                             {id: "ADMIN", name: "Admin", description: "Has full access to everything in the tenant"},
                             {id: "USER", name: "User", description: "Has limited access to the tenant"},
                             {id: "SERVICE", name: "Service", description: "An application or service that can perform actions automatically"}
-                        ]} />
+                        ]}/> : null}
                         {/* <InputField label="Manager" value={manager} setValue={setManager} /> */}
                         {/* <InputField label="Tenant" value={tenant} setValue={setTenant} /> */}
                     </div>
@@ -210,11 +235,12 @@ export function UserInfoDrawer({open, setOpen, user, usersListHook}: {open: bool
     );
 }
 
-export function InputField({label, value, setValue, type, style, autoComplete}: {label: string, value: string, setValue: (value: string) => void, type?: HTMLInputTypeAttribute, style?: React.CSSProperties, autoComplete?: HTMLInputTypeAttribute}) {
+export function InputField({label, value, setValue, type, style, autoComplete, extraInfo}: {label: string, value: string, setValue: (value: string) => void, type?: HTMLInputTypeAttribute, style?: React.CSSProperties, autoComplete?: HTMLInputTypeAttribute, extraInfo?: React.ReactNode}) {
     return (
         <div style={{padding: "20px 20px 0px 20px", ...style}}>
             <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>{label}</div>
             <Input autoCorrect="off" autoCapitalize="off" style={{backgroundColor: "var(--header-background)"}} value={value} onChange={(e) => setValue(e.target.value)} type={type} autoComplete={autoComplete} />
+            {extraInfo && <div style={{color: "var(--qu-text-secondary)", fontSize: "12px", marginTop: "5px"}}>{extraInfo}</div>}
         </div>
     );
 }
@@ -334,6 +360,15 @@ export function SelectInput({label, value, setValue, options}: {label: string, v
     );
 }
 
+export function SwitchInput({label, value, setValue}: {label: string, value: boolean, setValue: (value: boolean) => void}) {
+    return (
+        <div style={{padding: "20px 20px 0px 20px"}} className="flex items-center justify-between">
+            <div style={{fontSize: "14px", fontWeight: "500"}}>{label}</div>
+            <Switch checked={value} onCheckedChange={setValue} />
+        </div>
+    );
+}
+
 export function SuffixedInput({label, value, setValue, suffix, fitInput, pattern, style}: {label: string, value: string, setValue: (value: string) => void, suffix: string, fitInput?: boolean, pattern?: string, style?: React.CSSProperties}) {
     return (
         <div style={{padding: "20px 20px 0px 20px", ...style}}>
@@ -347,10 +382,11 @@ export function SuffixedInput({label, value, setValue, suffix, fitInput, pattern
 }
 
 export function AddUserDrawer({open, setOpen, usersListHook}: {open: boolean, setOpen: (open: boolean) => void, usersListHook: any}) {
+    const pathname = usePathname();
     const [name, setName] = useState("");
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
-    const [role, setRole] = useState("");
+    const [role, setRole] = useState(pathname.startsWith("/admin") ? "" : "ADMIN");
     const session = useSession();
     const [password, setPassword] = useState("");
     const [domainId, setDomainId] = useState("");
@@ -372,13 +408,13 @@ export function AddUserDrawer({open, setOpen, usersListHook}: {open: boolean, se
                     <InputField label="Name" value={name} setValue={setName} />
                     <PrefixedInput label="Username" value={username} setValue={setUsername} prefix={session.data?.user?.tenant?.name + "/"} />
                     {/* <InputField label="Email" value={email} setValue={setEmail} /> */}
-                    <EmailOwnedDomainInput label="Email" value={email} setValue={setEmail} domainId={domainId} setDomainId={setDomainId} />
+                    {pathname.startsWith("/admin") ? <EmailOwnedDomainInput label="Email" value={email} setValue={setEmail} domainId={domainId} setDomainId={setDomainId} /> : <InputField label="Email" value={email} setValue={setEmail} />}
                     <InputField label="Password" value={password} setValue={setPassword} type="password" />
-                    <SelectInput label="Role" value={role} setValue={setRole} options={[
+                    {pathname.startsWith("/admin") ? <SelectInput label="Role" value={role} setValue={setRole} options={[
                         {id: "ADMIN", name: "Admin", description: "Has full access to everything in the tenant"},
                         {id: "USER", name: "User", description: "Has limited access to the tenant"},
                         {id: "SERVICE", name: "Service", description: "An application or service that can perform actions automatically"}
-                    ]} />
+                    ]}/> : null}
                 </div>}
                 {status === "loading" && <div className="drawer-mainarea">
                     <div style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", height: "100%", width: "100%"}}>

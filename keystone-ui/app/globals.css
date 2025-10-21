@@ -329,6 +329,51 @@ body {
     color: var(--qu-text-secondary);
 }
 
+.appchip {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    border-radius: 999px;
+    border: 1px solid var(--qu-border-color);
+    padding: 5px 15px;
+    cursor: pointer;
+    background-color: var(--header-background);
+    color: var(--qu-text);
+}
+
+.acquire-app-info {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    margin-left: 20px;
+    margin-right: 20px;
+}
+
+.acquire-app-info-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.acquire-app-info-text-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--qu-text);
+}
+
+.acquire-app-info-description {
+    font-size: 16px;
+    color: var(--qu-text);
+    margin-left: 20px;
+    margin-right: 20px;
+}
+
+.acquire-app-info-text-published {
+    font-size: 14px;
+    color: var(--qu-text-secondary);
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

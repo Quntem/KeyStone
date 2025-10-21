@@ -42,6 +42,11 @@ model User {
   domain domain? @relation(fields: [domainId], references: [id], name: "domainUsers")
 }
 
+enum TenantType {
+  Organization
+  Team
+}
+
 model tenant {
   displayName String?
   id    String @id @default(cuid())
@@ -58,6 +63,7 @@ model tenant {
   domains domain[] @relation(name: "tenantDomains")
   groups group[]
   externalAppAccess ExternalAppAccess[]
+  type TenantType @default(Organization)
 }
 
 model group {

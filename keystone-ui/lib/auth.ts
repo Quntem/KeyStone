@@ -137,6 +137,23 @@ export function useEmailExists(email: string) {
     return emailExists;
 }
 
+export function usePublicApp(appid: string) {
+    const [publicApp, setPublicApp] = useState({loaded: false, data: {
+        app: null,
+        tenant: null,
+    }});
+    useEffect(() => {
+        if (appid) {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/auth/publicapp/" + appid).then((res) => {
+                return res.json();
+            }).then((data) => {
+                setPublicApp({loaded: true, data});
+            });
+        }
+    }, [appid]);
+    return publicApp;
+}
+
 export function useTenantExists(name: string) {
     const [value] = useDebounce(name, 500);
     const [tenantExists, setTenantExists] = useState(false);
