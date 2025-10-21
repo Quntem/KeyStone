@@ -57,7 +57,6 @@ export const TeamHeader = ({title}: {title: string}) => {
     const size = useWindowSize();
     const [open, setOpen] = useState(false);
     const path = usePathname();
-    const urlparams = useSearchParams();
     useEffect(() => {
         if (session.data && !session.data.error) {
             console.log(session.data);
@@ -70,7 +69,7 @@ export const TeamHeader = ({title}: {title: string}) => {
     return (
         <header>
             {/* <Launcher /> */}
-            {urlparams.get("return") ? <Button onClick={() => {window.location.href = urlparams.get("return")}} size={"icon"} variant={"ghost"} style={{marginLeft: "10px"}}><ArrowLeftIcon size={20}/></Button> : null}
+            {/* {urlparams.get("return") ? <Button onClick={() => {window.location.href = urlparams.get("return")}} size={"icon"} variant={"ghost"} style={{marginLeft: "10px"}}><ArrowLeftIcon size={20}/></Button> : null} */}
             <SidebarDrawer open={open} onOpenChange={setOpen} />
             {/* {(size.width < 1024 && size.width != 0 && !path.startsWith("/apps")) ? <MenuIcon style={{cursor: "pointer", marginLeft: "5px"}} size="20" onClick={() => {setOpen(true)}} /> : session.data?.user?.tenant?.logo ? <><img src={session.data?.user?.tenant?.logo} className="header-logo" /><div className="header-logo-divider" /></> : null} */}
             <div style={{width: "15px"}} />
