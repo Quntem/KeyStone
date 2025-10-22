@@ -20,7 +20,7 @@ export const Header = ({title}: {title: string}) => {
     const path = usePathname();
     const tenant = useTenant();
     useEffect(() => {
-        if (session.data) {
+        if (session.data?.user && session.loaded) {
             console.log(session.data);
         } else if (session.data?.error) {
             if (session.loaded) {
@@ -58,7 +58,7 @@ export const TeamHeader = ({title}: {title: string}) => {
     const [open, setOpen] = useState(false);
     const path = usePathname();
     useEffect(() => {
-        if (session.data && !session.data.error) {
+        if (session.data?.user && !session.data.error) {
             console.log(session.data);
         } else if (session.data?.error) {
             if (session.loaded) {
