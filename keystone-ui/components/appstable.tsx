@@ -202,8 +202,8 @@ function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOp
 
                     <Separator style={{marginTop: "25px"}} />
 
-                    <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>External Access</div>
-                    <div style={{fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)"}}>Manage which external tenants can access this app</div>
+                    {/* <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>External Access</div>
+                    <div style={{fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)"}}>Manage which external tenants can access this app</div> */}
                     </> : <></>}
                 </div>
                 <Separator />

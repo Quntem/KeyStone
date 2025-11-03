@@ -36,7 +36,7 @@ export default function AdminPage() {
                     <div className="admin-page-title">Hello {session.data?.user?.name} 👋, welcome to {session.data?.user?.tenant?.displayName || session.data?.user?.tenant?.name}'s dashboard</div>
                 </div>
             </div>
-            <div className="flex flex-row align-center justify-center">
+            <div className="flex flex-row align-center justify-center gap-4">
                 {apps.loaded ? apps.data?.map((app: any) => {
                     return <AppChip key={app.id} app={app.app}/>
                 }) : null}

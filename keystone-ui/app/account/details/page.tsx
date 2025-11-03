@@ -1,6 +1,6 @@
 "use client"
 import { motion } from "framer-motion";
-import { SetDisplayName } from "@/components/infromationEdit";
+import { SetName } from "@/components/infromationEdit";
 import { useSession } from "@/lib/auth";
 
 export default function AccountPage() {
@@ -13,7 +13,7 @@ export default function AccountPage() {
                     <div className="admin-page-subtitle">Manage your details</div>
                 </div>
             </div>  
-            {session.data?.user && <SetDisplayName defaultDisplayName={session.data?.user?.name} />}
+            {session.data?.user && <SetName defaultName={session.data?.user?.name} />}
         </motion.div>
     )
 }

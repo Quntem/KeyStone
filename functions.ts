@@ -131,11 +131,20 @@ export async function createSession({userId, password}: {userId: string, passwor
     if (!comparePassword(password, user.password)) {
         throw new Error("Invalid password");
     }
-    return await prisma.session.create({
-        data: {
-            userId,
-        },
-    });
+    if (user.role == Role.SERVICE) {
+        return await prisma.session.create({
+            data: {
+                userId,
+                expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+            },
+        });
+    } else {
+        return await prisma.session.create({
+            data: {
+                userId,
+            },
+        });
+    }
 }
 
 export async function getSession({sessionId}: {sessionId: string}) {

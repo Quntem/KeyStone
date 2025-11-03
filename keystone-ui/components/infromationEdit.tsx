@@ -36,7 +36,7 @@ export function SetName({defaultName}: {defaultName: string}) {
             <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
         </CardContent>
         <CardFooter style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: "10px"}}>
-            <Button variant="outline" disabled={name === originalName}><SaveIcon size={20} />Save</Button>
+            <Button variant="outline" disabled={name === originalName} onClick={() => {setDisplayName(name).then(() => {setOriginalName(name)});}}><SaveIcon size={20} />Save</Button>
             <Button variant="outline"><XIcon size={20} />Remove</Button>
         </CardFooter>
     </Card>

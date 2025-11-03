@@ -27,7 +27,7 @@ export const UserSidebar = ({ignoreSize}: {ignoreSize?: boolean}) => {
             <SidebarItem title="Sessions" onClick={() => {router.push("/account/sessions")}} Icon={LaptopMinimalIcon} active={path === "/account/sessions"} index={3} />
             <Separator style={{margin: "10px 0px"}} />
             {tenant.data?.tenant?.type === "Organization" && <SidebarItem title="Your Apps" onClick={() => {router.push("/apps")}} Icon={LayoutGrid} active={false} index={4} />}
-            {session.data?.user?.role === "ADMIN" && tenant.data?.tenant?.type === "Organization" ? <SidebarItem title="Admin" onClick={() => {router.push("/admin")}} Icon={SettingsIcon} active={false} index={5} /> : <SidebarItem title="Team Dashboard" onClick={() => {router.push("/team")}} Icon={LayoutDashboard} active={false} index={5} />}
+            {session.data?.user?.role === "ADMIN" && tenant.data?.tenant?.type === "Organization" ? <SidebarItem title="Admin" onClick={() => {router.push("/admin")}} Icon={SettingsIcon} active={false} index={5} /> : session.data?.user?.role === "ADMIN" && tenant.data?.tenant?.type === "Team" ? <SidebarItem title="Team Dashboard" onClick={() => {router.push("/team")}} Icon={LayoutDashboard} active={false} index={5} /> : null}
             <Separator style={{margin: "10px 0px"}} />
             <SidebarFooter index={session.data?.user?.role === "ADMIN" ? 6 : 5} />
         </div>
