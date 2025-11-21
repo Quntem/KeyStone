@@ -7,7 +7,7 @@ export const metadata = {
     description: "Team Dashboard",
 };
 
-export default function TeamLayout({children}: {children: React.ReactNode}) {
+export default function TeamLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="page-header-container">
             <TeamHeader title="Team Dashboard" />

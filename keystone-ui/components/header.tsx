@@ -12,40 +12,42 @@ import { Button } from "./ui/button";
 import { Launcher } from "./launcher";
 import { useTenant } from "@/lib/auth";
 
-export const Header = ({title}: {title: string}) => {
+export const Header = ({ title }: { title: string }) => {
     const session = useSession();
     const router = useRouter();
     const size = useWindowSize();
     const [open, setOpen] = useState(false);
     const path = usePathname();
     const tenant = useTenant();
+    const searchParams = useSearchParams()
     useEffect(() => {
-        if (session.data?.user && session.loaded) {
+        if (session.data?.user?.id && session.loaded) {
             console.log(session.data);
-        } else if (session.data?.error) {
-            if (session.loaded) {
-                window.location.href = process.env.NEXT_PUBLIC_API_URL + "/auth/signin?redirectTo=" + window.location.href;
-            }
+        } else if (session.data?.error && session.loaded) {
+            window.location.href = process.env.NEXT_PUBLIC_API_URL + "/auth/signin?redirectTo=" + window.location.href;
         }
     }, [session]);
     if (tenant.data?.tenant?.type == "Team" && !path.startsWith("/account")) {
         router.push("/account");
     }
+    if (searchParams.has("hideheader")) {
+        return null
+    }
     return (
         <header>
             {/* {tenant.data?.tenant?.type === "Organization" ? <Launcher /> : null} */}
-            {tenant.data?.tenant?.logo && <div style={{width: "10px"}} />}
+            {tenant.data?.tenant?.logo && <div style={{ width: "10px" }} />}
             <SidebarDrawer open={open} onOpenChange={setOpen} />
-            {(size.width < 1024 && size.width != 0 && !path.startsWith("/apps")) ? <MenuIcon style={{cursor: "pointer", marginLeft: "5px"}} size="20" onClick={() => {setOpen(true)}} /> : tenant.data?.tenant?.logo ? <><img src={tenant.data?.tenant?.logo} className="header-logo" /><div className="header-logo-divider" /></> : null}
-            <div style={{width: "15px"}} />
+            {(size.width < 1024 && size.width != 0 && !path.startsWith("/apps")) ? <MenuIcon style={{ cursor: "pointer", marginLeft: "5px" }} size="20" onClick={() => { setOpen(true) }} /> : tenant.data?.tenant?.logo ? <><img src={tenant.data?.tenant?.logo} className="header-logo" /><div className="header-logo-divider" /></> : null}
+            <div style={{ width: "15px" }} />
             {tenant.data?.tenant?.type === "Organization" ? <HeaderDropdown user={session} title={title} /> : <div className="header-title">{title}</div>}
-            <div style={{flex: 1}} />
+            <div style={{ flex: 1 }} />
             <HeaderUser />
         </header>
     );
 };
 
-export const TeamHeader = ({title}: {title: string}) => {
+export const TeamHeader = ({ title }: { title: string }) => {
     const tenant = useTenant();
     const router = useRouter();
     useEffect(() => {
@@ -72,50 +74,50 @@ export const TeamHeader = ({title}: {title: string}) => {
             {/* {urlparams.get("return") ? <Button onClick={() => {window.location.href = urlparams.get("return")}} size={"icon"} variant={"ghost"} style={{marginLeft: "10px"}}><ArrowLeftIcon size={20}/></Button> : null} */}
             <SidebarDrawer open={open} onOpenChange={setOpen} />
             {/* {(size.width < 1024 && size.width != 0 && !path.startsWith("/apps")) ? <MenuIcon style={{cursor: "pointer", marginLeft: "5px"}} size="20" onClick={() => {setOpen(true)}} /> : session.data?.user?.tenant?.logo ? <><img src={session.data?.user?.tenant?.logo} className="header-logo" /><div className="header-logo-divider" /></> : null} */}
-            <div style={{width: "15px"}} />
+            <div style={{ width: "15px" }} />
             {/* <HeaderDropdown user={session} title={title} /> */}
             <div className="header-title">{title}</div>
-            <div style={{flex: 1}} />
+            <div style={{ flex: 1 }} />
             <HeaderUser />
         </header>
     );
 };
 
-function HeaderDropdown({user, title}: {user: any, title: string}) {
+function HeaderDropdown({ user, title }: { user: any, title: string }) {
     const router = useRouter();
     const path = usePathname();
     const triggerRef = useRef<HTMLDivElement>(null);
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger style={{display: "flex", alignItems: "center", gap: "5px", outline: "none"}} ref={triggerRef}>
+            <DropdownMenuTrigger style={{ display: "flex", alignItems: "center", gap: "5px", outline: "none" }} ref={triggerRef}>
                 <div className="header-title">{title}</div>
                 <ChevronDownIcon size="20" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="bottom" align="center" sideOffset={20} style={{width: triggerRef.current?.offsetWidth}}>
-                {!path.startsWith("/account") ? <DropdownMenuItem style={{fontFamily: "Figtree", fontSize: "16px", color: "var(--qu-text)"}} onClick={() => {router.push("/account")}}><UserIcon size={20}/>Account</DropdownMenuItem> : null}
-                {!path.startsWith("/apps") ? <DropdownMenuItem style={{fontFamily: "Figtree", fontSize: "16px", color: "var(--qu-text)"}} onClick={() => {router.push("/apps")}}><LayoutGrid size={20}/>Apps</DropdownMenuItem> : null}
-                {(user?.data?.user?.role === "ADMIN" && !path.startsWith("/admin")) ? <DropdownMenuItem style={{fontFamily: "Figtree", fontSize: "16px", color: "var(--qu-text)"}} onClick={() => {router.push("/admin")}}><SettingsIcon size={20}/>Admin</DropdownMenuItem> : null}
+            <DropdownMenuContent side="bottom" align="center" sideOffset={20} style={{ width: triggerRef.current?.offsetWidth }}>
+                {!path.startsWith("/account") ? <DropdownMenuItem style={{ fontFamily: "Figtree", fontSize: "16px", color: "var(--qu-text)" }} onClick={() => { router.push("/account") }}><UserIcon size={20} />Account</DropdownMenuItem> : null}
+                {!path.startsWith("/apps") ? <DropdownMenuItem style={{ fontFamily: "Figtree", fontSize: "16px", color: "var(--qu-text)" }} onClick={() => { router.push("/apps") }}><LayoutGrid size={20} />Apps</DropdownMenuItem> : null}
+                {(user?.data?.user?.role === "ADMIN" && !path.startsWith("/admin")) ? <DropdownMenuItem style={{ fontFamily: "Figtree", fontSize: "16px", color: "var(--qu-text)" }} onClick={() => { router.push("/admin") }}><SettingsIcon size={20} />Admin</DropdownMenuItem> : null}
             </DropdownMenuContent>
         </DropdownMenu>
     );
 }
 
-export function SidebarDrawer({open, onOpenChange}: {open: boolean, onOpenChange: (open: boolean) => void}) {
+export function SidebarDrawer({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
     const path = usePathname();
     return (
         <Drawer direction="left" open={open} onOpenChange={onOpenChange}>
-            <DrawerContent style={{width: "250px"}}>
+            <DrawerContent style={{ width: "250px" }}>
                 {path.startsWith("/admin") ? <AdminSidebar ignoreSize /> : path.startsWith("/team") ? <TeamSidebar ignoreSize /> : <UserSidebar ignoreSize />}
             </DrawerContent>
         </Drawer>
     );
 }
 
-export function UserItem({user, Extra, onClick}: {user: any, Extra?: JSX.Element, onClick?: () => void}) {
+export function UserItem({ user, Extra, onClick }: { user: any, Extra?: JSX.Element, onClick?: () => void }) {
     return (
         <div className="flex items-center gap-2" onClick={onClick}>
-            <Avatar className="border border-[var(--qu-border-color)]" style={{fontSize: "14px", fontWeight: "400"}}>
-                <AvatarFallback style={{color: "var(--qu-text)"}}>{user.name.charAt(0).toUpperCase() + user.name.charAt(1).toUpperCase()}</AvatarFallback>
+            <Avatar className="border border-[var(--qu-border-color)]" style={{ fontSize: "14px", fontWeight: "400" }}>
+                <AvatarFallback style={{ color: "var(--qu-text)" }}>{user.name.charAt(0).toUpperCase() + user.name.charAt(1).toUpperCase()}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left leading-tight">
                 <span className="truncate font-semibold text-sm color-[var(--qu-text)]">{user.name}</span>
@@ -137,8 +139,8 @@ function HeaderUser() {
                         <div className="header-user-text">{session.data?.user?.name} ({session.data?.user?.tenant?.name + "/" + session.data?.user?.username})</div>
                         <div className="header-company-text">{session.data?.user?.email} ({session.data?.user?.tenant?.name})</div>
                     </div>}
-                    <Avatar style={{width: "30px", height: "30px", marginRight: "10px", border: "1px solid var(--qu-border-color)"}}>
-                        <AvatarFallback style={{color: "var(--qu-text)"}}>{session.data?.user?.name.charAt(0).toUpperCase() + session.data?.user?.name.charAt(1).toUpperCase()}</AvatarFallback>
+                    <Avatar style={{ width: "30px", height: "30px", marginRight: "10px", border: "1px solid var(--qu-border-color)" }}>
+                        <AvatarFallback style={{ color: "var(--qu-text)" }}>{session.data?.user?.name.charAt(0).toUpperCase() + session.data?.user?.name.charAt(1).toUpperCase()}</AvatarFallback>
                     </Avatar>
                 </div>
             </DropdownMenuTrigger>
@@ -147,7 +149,7 @@ function HeaderUser() {
                     <UserItem user={session.data?.user} />
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="color-[var(--qu-text)]" onClick={() => {LogOut().then(() => {window.location.href = process.env.NEXT_PUBLIC_API_URL + "/auth/signin?redirectTo=" + window.location.href})}}><LogOutIcon size={20}/>Logout</DropdownMenuItem>
+                <DropdownMenuItem className="color-[var(--qu-text)]" onClick={() => { LogOut().then(() => { window.location.href = process.env.NEXT_PUBLIC_API_URL + "/auth/signin?redirectTo=" + window.location.href }) }}><LogOutIcon size={20} />Logout</DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     );
@@ -157,11 +159,12 @@ export function InfoHeader() {
     const router = useRouter();
     return (
         <header>
-            <div style={{width: "15px"}} />
-            <div className="header-title">Quntem KeyStone</div>
-            <div style={{flex: 1}} />
-            <Button size="sm" variant="outline" style={{marginRight: "10px"}} onClick={() => {router.push("/account")}}><LogInIcon size={20}/>Access My Account</Button>
-            <Button size="sm" style={{marginRight: "10px"}} onClick={() => {router.push("/get-started")}}><SparklesIcon size={20}/>Get Started</Button>
+            <div style={{ width: "15px" }} />
+            {/* <div className="header-title">Quntem KeyStone</div> */}
+            <img src={"/logo_text.svg"} style={{ height: 25 }} />
+            <div style={{ flex: 1 }} />
+            <Button size="sm" variant="outline" style={{ marginRight: "10px" }} onClick={() => { router.push("/account") }}><LogInIcon size={20} />Access My Account</Button>
+            <Button size="sm" style={{ marginRight: "10px" }} onClick={() => { router.push("/get-started") }}><SparklesIcon size={20} />Get Started</Button>
         </header>
     );
 }
@@ -169,10 +172,9 @@ export function InfoHeader() {
 export function GetStartedHeader() {
     return (
         <header>
-            <div style={{width: "15px"}} />
+            <div style={{ width: "15px" }} />
             <div className="header-title">Quntem KeyStone</div>
-            <div style={{flex: 1}} />
+            <div style={{ flex: 1 }} />
         </header>
     );
 }
-    

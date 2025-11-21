@@ -14,14 +14,14 @@ import { useEffect, useState } from "react";
 export default function UsersPage() {
     const tenant = useTenant();
     return (
-        <motion.div className="admin-page" initial={{x: "50px"}} animate={{x: "0px"}} transition={{duration: 0.2, ease: "easeInOut"}}>
+        <motion.div className="admin-page" initial={{ x: "50px" }} animate={{ x: "0px" }} transition={{ duration: 0.2, ease: "easeInOut" }}>
             <div className="admin-page-header">
                 <div>
                     <div className="admin-page-title">Settings</div>
                     <div className="admin-page-subtitle">Manage your team</div>
                 </div>
             </div>
-            <div style={{display: "flex", flexDirection: "row", gap: "40px"}}>
+            <div style={{ display: "flex", flexDirection: "row", gap: "40px" }}>
                 <SettingsPageItems />
                 <UpgradeToFullTenant />
             </div>
@@ -32,15 +32,15 @@ export default function UsersPage() {
 export function SettingsPageItems() {
     const tenant = useTenant();
     return (
-        tenant.data?.tenant && <div className="admin-page-content" style={{display: "flex", flexDirection: "column", gap: "20px", width: "50%"}}>
-                {/* <SetLogo defaultLogo={tenant.data?.tenant?.logo || ""} /> */}
-                <Alert>
-                    <KeyRoundIcon />
-                    <AlertTitle>Why can everyone add users?</AlertTitle>
-                    <AlertDescription>KeyStone For Teams is designed for small teams inside of organizations, so everyone in the team can add users. If you want to limit this, you can verify your domain and convert to a full tenant (it's Free!)</AlertDescription>
-                </Alert>
-                <SetDisplayName defaultDisplayName={tenant.data?.tenant?.displayName || ""} />
-                <SetDescription defaultDescription={tenant.data?.tenant?.description || ""} />
+        tenant.data?.tenant && <div className="admin-page-content" style={{ display: "flex", flexDirection: "column", gap: "20px", width: "50%" }}>
+            {/* <SetLogo defaultLogo={tenant.data?.tenant?.logo || ""} /> */}
+            <Alert>
+                <KeyRoundIcon />
+                <AlertTitle>Why can everyone add users?</AlertTitle>
+                <AlertDescription>KeyStone For Teams is designed for small teams inside of organizations, so everyone in the team can add users. If you want to limit this, you can verify your domain and convert to a full tenant (it's Free!)</AlertDescription>
+            </Alert>
+            <SetDisplayName defaultDisplayName={tenant.data?.tenant?.displayName || ""} />
+            <SetDescription defaultDescription={tenant.data?.tenant?.description || ""} />
         </div>
     )
 }
@@ -55,11 +55,11 @@ export function UpgradeToFullTenant() {
         }
     }, [session.data?.user?.email]);
     return (
-        <div className="admin-page-content" style={{display: "flex", flexDirection: "column", gap: "15px", width: "500px"}}>
-            <div style={{display: "flex", flexDirection: "column", gap: "5px"}}>
-                <img src="/icon.svg" style={{width: "40px", height: "40px"}} />
-                <div className="text-2xl font-semibold" style={{color: "var(--qu-text)"}}>Upgrade to a Full Tenant</div>
-                <div className="text-sm" style={{color: "var(--qu-text-secondary)"}}>Upgrade to a full tenant to unlock more features of KeyStone</div>
+        <div className="admin-page-content" style={{ display: "flex", flexDirection: "column", gap: "15px", width: "500px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                <img src="/icon.svg" style={{ width: "40px", height: "40px" }} />
+                <div className="text-2xl font-semibold" style={{ color: "var(--qu-text)" }}>Upgrade to a Full Tenant</div>
+                <div className="text-sm" style={{ color: "var(--qu-text-secondary)" }}>Upgrade to a full tenant to unlock more features of KeyStone</div>
             </div>
             <Alert>
                 <KeyRoundIcon />
@@ -71,16 +71,6 @@ export function UpgradeToFullTenant() {
                 <AlertTitle>Claim Domain</AlertTitle>
                 <AlertDescription>Claim your domain to prevent users from creating teams with their email</AlertDescription>
             </Alert> */}
-            {domainExists && <Alert variant="destructive" style={{width: "500px", marginBottom: "25px"}}>
-                <TriangleAlertIcon/>
-                <AlertTitle>Domain already exists</AlertTitle>
-                <AlertDescription>You already have a tenant with this domain</AlertDescription>
-            </Alert>}
-            {isPersonalDomain && <Alert variant="destructive" style={{width: "500px", marginBottom: "25px"}}>
-                <TriangleAlertIcon/>
-                <AlertTitle>Personal Domain</AlertTitle>
-                <AlertDescription>You cannot upgrade a personal domain</AlertDescription>
-            </Alert>}
             <Alert>
                 <LayoutGridIcon />
                 <AlertTitle>Create Apps</AlertTitle>
@@ -93,6 +83,16 @@ export function UpgradeToFullTenant() {
                         <DialogTitle>Start Migration</DialogTitle>
                         <DialogDescription>Start the migration to a full tenant, just verify your domain and you're good to go!</DialogDescription>
                     </DialogHeader>
+                    {domainExists && <Alert variant="destructive" style={{ width: "500px", marginBottom: "25px" }}>
+                        <TriangleAlertIcon />
+                        <AlertTitle>Domain already exists</AlertTitle>
+                        <AlertDescription>You already have a tenant with this domain</AlertDescription>
+                    </Alert>}
+                    {isPersonalDomain && <Alert variant="destructive" style={{ width: "500px", marginBottom: "25px" }}>
+                        <TriangleAlertIcon />
+                        <AlertTitle>Personal Domain</AlertTitle>
+                        <AlertDescription>You cannot upgrade a personal domain</AlertDescription>
+                    </Alert>}
                     <DialogFooter>
                         <DialogClose asChild>
                             <Button variant="outline"><XIcon />Cancel</Button>
@@ -106,7 +106,7 @@ export function UpgradeToFullTenant() {
                                     "Content-Type": "application/json",
                                     "Accept": "application/json",
                                 },
-                                body: JSON.stringify({domain: session.data?.user?.email.split("@")[1]})
+                                body: JSON.stringify({ domain: session.data?.user?.email.split("@")[1] })
                             }).then(res => {
                                 return res.json();
                             }).then(async data => {
@@ -119,4 +119,3 @@ export function UpgradeToFullTenant() {
         </div>
     )
 }
-    

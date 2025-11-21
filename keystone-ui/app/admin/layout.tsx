@@ -7,7 +7,7 @@ export const metadata = {
     description: "KeyStone Admin Center",
 };
 
-export default function AdminLayout({children}: {children: React.ReactNode}) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="page-header-container">
             <Header title="KeyStone Admin Center" />

@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/keystone";
 import { useEffect } from "react";
 
 export default function Home() {
-  const auth = useAuth({appId: process.env.NEXT_PUBLIC_KEYSTONE_APPID as string, keystoneUrl: process.env.NEXT_PUBLIC_KEYSTONE_URL as string});
+  const auth = useAuth({ appId: process.env.NEXT_PUBLIC_KEYSTONE_APPID as string, keystoneUrl: process.env.NEXT_PUBLIC_KEYSTONE_URL as string });
   useEffect(() => {
     console.log(auth);
   }, [auth]);
@@ -23,8 +23,9 @@ export default function Home() {
       <div>Email: {auth?.data?.user?.email}</div>
       <div>Username: {auth?.data?.user?.username}</div>
       <div>You are a {auth?.data?.user?.role} in {auth?.data?.user?.tenant?.name}</div>
-      <div>Tenant Logo: <img src={auth?.data?.user?.tenant?.logo} alt="Tenant Logo" /></div>
+      {/* <div>Tenant Logo: <img src={auth?.data?.user?.tenant?.logo} alt="Tenant Logo" /></div> */}
       <div>Groups: {auth?.data?.user?.groups?.map((group) => group.group.name).join(", ")}</div>
+      <div>Apps: {JSON.stringify(auth.data.user.userAppAccess)}</div>
       <div>Your session started at {new Date(auth?.data?.createdAt).toLocaleString()}</div>
       <div>You are using the app {auth?.data?.app?.name}</div>
       <div>App Logo: <img src={auth?.data?.app?.logo} alt="App Logo" /></div>
@@ -42,6 +43,7 @@ export default function Home() {
           console.log(res);
         });
       }}>Test Request</button>
+      <iframe className="w-full h-200" src="https://localhost:3002/admin/apps?hideheader&&hidehome" />
     </div>
   );
 }

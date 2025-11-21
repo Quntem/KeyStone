@@ -15,7 +15,7 @@ export function comparePassword(password: string, hashedPassword: string) {
     return bcrypt.compareSync(password, hashedPassword);
 }
 
-export async function createUser({email, password, name, tenantId, username, role, domainId}: {email: string, password: string, name: string, tenantId: string, username: string, role: string, domainId?: string}) {
+export async function createUser({ email, password, name, tenantId, username, role, domainId }: { email: string, password: string, name: string, tenantId: string, username: string, role: string, domainId?: string }) {
     var users = await prisma.user.findMany({
         where: {
             tenantId,
@@ -38,7 +38,7 @@ export async function createUser({email, password, name, tenantId, username, rol
     });
 }
 
-export function SetUserPassword({userId, password}: {userId: string, password: string}) {
+export function SetUserPassword({ userId, password }: { userId: string, password: string }) {
     return prisma.user.update({
         where: {
             id: userId,
@@ -49,7 +49,7 @@ export function SetUserPassword({userId, password}: {userId: string, password: s
     });
 }
 
-export async function validateUser({userId, password}: {userId: string, password: string}) {
+export async function validateUser({ userId, password }: { userId: string, password: string }) {
     var user = await prisma.user.findUnique({
         where: {
             id: userId,
@@ -63,7 +63,7 @@ export async function validateUser({userId, password}: {userId: string, password
     }
 }
 
-export async function getUserIdByEmail({email}: {email: string}) {
+export async function getUserIdByEmail({ email }: { email: string }) {
     return await prisma.user.findUnique({
         where: {
             email,
@@ -71,7 +71,7 @@ export async function getUserIdByEmail({email}: {email: string}) {
     });
 }
 
-export async function updateUser({id, name, email, username, role, domainId}: {id: string, name: string, email: string, username: string, role: string, domainId: string}) {
+export async function updateUser({ id, name, email, username, role, domainId }: { id: string, name: string, email: string, username: string, role: string, domainId: string }) {
     return await prisma.user.update({
         where: {
             id,
@@ -86,7 +86,7 @@ export async function updateUser({id, name, email, username, role, domainId}: {i
     });
 }
 
-export async function getTenantByName({name}: {name: string}) {
+export async function getTenantByName({ name }: { name: string }) {
     return await prisma.tenant.findUnique({
         where: {
             name,
@@ -94,7 +94,7 @@ export async function getTenantByName({name}: {name: string}) {
     });
 }
 
-export async function getUserIdByUsername({tenantId, username}: {tenantId: string, username: string}) {
+export async function getUserIdByUsername({ tenantId, username }: { tenantId: string, username: string }) {
     if (username.includes("/")) {
         var path = username.split("/").pop()?.concat("/");
         username = username.split("/")[1];
@@ -111,7 +111,7 @@ export async function getUserIdByUsername({tenantId, username}: {tenantId: strin
     });
 }
 
-export function listChildTenants({tenantId}: {tenantId: string}) {
+export function listChildTenants({ tenantId }: { tenantId: string }) {
     return prisma.tenant.findMany({
         where: {
             parentTenantId: tenantId,
@@ -119,7 +119,7 @@ export function listChildTenants({tenantId}: {tenantId: string}) {
     });
 }
 
-export async function createSession({userId, password}: {userId: string, password: string}) {
+export async function createSession({ userId, password }: { userId: string, password: string }) {
     var user = await prisma.user.findUnique({
         where: {
             id: userId,
@@ -147,7 +147,7 @@ export async function createSession({userId, password}: {userId: string, passwor
     }
 }
 
-export async function getSession({sessionId}: {sessionId: string}) {
+export async function getSession({ sessionId }: { sessionId: string }) {
     var session = await prisma.session.findUnique({
         where: {
             id: sessionId,
@@ -157,13 +157,13 @@ export async function getSession({sessionId}: {sessionId: string}) {
         return undefined;
     }
     if (session.expiresAt < new Date()) {
-        await deleteSession({sessionId: session.id});
+        await deleteSession({ sessionId: session.id });
         return undefined;
     }
     return session;
 }
 
-export async function createTenant({name, type}: {name: string, type: string}) {
+export async function createTenant({ name, type }: { name: string, type: string }) {
     return await prisma.tenant.create({
         data: {
             name,
@@ -172,7 +172,7 @@ export async function createTenant({name, type}: {name: string, type: string}) {
     });
 }
 
-export async function getUserById({id}: {id: string}) {
+export async function getUserById({ id }: { id: string }) {
     return await prisma.user.findUnique({
         where: {
             id,
@@ -194,7 +194,7 @@ export async function getUserById({id}: {id: string}) {
     });
 }
 
-export async function listSessions({userId}: {userId: string}) {
+export async function listSessions({ userId }: { userId: string }) {
     var sessions = await prisma.session.findMany({
         where: {
             userId,
@@ -205,13 +205,13 @@ export async function listSessions({userId}: {userId: string}) {
     });
     sessions.forEach((session) => {
         if (session.expiresAt < new Date()) {
-            deleteSession({sessionId: session.id});
+            deleteSession({ sessionId: session.id });
         }
     });
     return sessions;
 }
 
-export async function deleteSession({sessionId}: {sessionId: string}) {
+export async function deleteSession({ sessionId }: { sessionId: string }) {
     return await prisma.session.delete({
         where: {
             id: sessionId,
@@ -219,7 +219,7 @@ export async function deleteSession({sessionId}: {sessionId: string}) {
     });
 }
 
-export async function listUsers({tenantId, path}: {tenantId: string, path?: string}) {
+export async function listUsers({ tenantId, path }: { tenantId: string, path?: string }) {
     return await prisma.user.findMany({
         where: {
             tenantId,
@@ -235,7 +235,7 @@ export async function listUsers({tenantId, path}: {tenantId: string, path?: stri
     });
 }
 
-export async function listTenantUsers({tenantId}: {tenantId: string}) {
+export async function listTenantUsers({ tenantId }: { tenantId: string }) {
     return await prisma.user.findMany({
         where: {
             tenantId,
@@ -257,7 +257,7 @@ export async function listTenantUsers({tenantId}: {tenantId: string}) {
     });
 }
 
-export async function getTenantById({id}: {id: string}) {
+export async function getTenantById({ id }: { id: string }) {
     return await prisma.tenant.findUnique({
         where: {
             id,
@@ -268,7 +268,7 @@ export async function getTenantById({id}: {id: string}) {
     });
 }
 
-export function revokeUserAppAccess({id}: {id: string}) {
+export function revokeUserAppAccess({ id }: { id: string }) {
     return prisma.userAppAccess.delete({
         where: {
             id,
@@ -276,7 +276,7 @@ export function revokeUserAppAccess({id}: {id: string}) {
     });
 }
 
-export function grantUserAppAccess({userId, appId}: {userId: string, appId: string}) {
+export function grantUserAppAccess({ userId, appId }: { userId: string, appId: string }) {
     return prisma.userAppAccess.create({
         data: {
             userId,
@@ -297,7 +297,7 @@ export function grantUserAppAccess({userId, appId}: {userId: string, appId: stri
     });
 }
 
-export function listUserAppAccess({userId}: {userId: string}) {
+export function listUserAppAccess({ userId }: { userId: string }) {
     return prisma.userAppAccess.findMany({
         where: {
             userId,
@@ -308,7 +308,7 @@ export function listUserAppAccess({userId}: {userId: string}) {
     });
 }
 
-export function createApp({name, description, logo, allowedURLs, tenantId, mainUrl}: {name: string, description: string, logo: string, allowedURLs: string[], tenantId: string, mainUrl: string}) {
+export function createApp({ name, description, logo, allowedURLs, tenantId, mainUrl }: { name: string, description: string, logo: string, allowedURLs: string[], tenantId: string, mainUrl: string }) {
     return prisma.app.create({
         data: {
             name,
@@ -321,7 +321,7 @@ export function createApp({name, description, logo, allowedURLs, tenantId, mainU
     });
 }
 
-export function getAppById({id, includeExternal}: {id: string, includeExternal?: boolean}) {
+export function getAppById({ id, includeExternal }: { id: string, includeExternal?: boolean }) {
     return prisma.app.findUnique({
         where: {
             id,
@@ -339,7 +339,7 @@ export function getAppById({id, includeExternal}: {id: string, includeExternal?:
     });
 }
 
-export function userHasAppAccess({userId, appId}: {userId: string, appId: string}) {
+export function userHasAppAccess({ userId, appId }: { userId: string, appId: string }) {
     return prisma.userAppAccess.findUnique({
         where: {
             userId_appId: {
@@ -350,8 +350,8 @@ export function userHasAppAccess({userId, appId}: {userId: string, appId: string
     });
 }
 
-export function listTenantApps({tenantId}: {tenantId: string}) {
-    return prisma.app.findMany({
+export async function listTenantApps({ tenantId }: { tenantId: string }) {
+    const apps = await prisma.app.findMany({
         where: {
             OR: [
                 {
@@ -395,9 +395,18 @@ export function listTenantApps({tenantId}: {tenantId: string}) {
             },
         },
     });
+    var apps2 = apps.map((item) => {
+        console.log(item.tenantId)
+        if (item.tenantId != tenantId) {
+            item.secret = ""
+        }
+        return item
+    })
+    console.log(apps2)
+    return apps2
 }
 
-export function updateApp({id, name, description, logo, allowedURLs, mainUrl, availableForExternal}: {id: string, name: string, description: string, logo: string, allowedURLs: string[], mainUrl: string, availableForExternal: boolean}) {
+export function updateApp({ id, name, description, logo, allowedURLs, mainUrl, availableForExternal }: { id: string, name: string, description: string, logo: string, allowedURLs: string[], mainUrl: string, availableForExternal: boolean }) {
     return prisma.app.update({
         where: {
             id,
@@ -413,7 +422,7 @@ export function updateApp({id, name, description, logo, allowedURLs, mainUrl, av
     });
 }
 
-export function deleteApp({id}: {id: string}) {
+export function deleteApp({ id }: { id: string }) {
     return prisma.app.delete({
         where: {
             id,
@@ -421,7 +430,7 @@ export function deleteApp({id}: {id: string}) {
     });
 }
 
-export function listAppSessions({sessionId}: {sessionId: string}) {
+export function listAppSessions({ sessionId }: { sessionId: string }) {
     return prisma.userAppSession.findMany({
         where: {
             sessionId,
@@ -429,7 +438,7 @@ export function listAppSessions({sessionId}: {sessionId: string}) {
     });
 }
 
-export function createAppSession({userAppAccessId, sessionId}: {userAppAccessId: string, sessionId: string}) {
+export function createAppSession({ userAppAccessId, sessionId }: { userAppAccessId: string, sessionId: string }) {
     return prisma.userAppSession.create({
         data: {
             userAppAccessId,
@@ -438,7 +447,7 @@ export function createAppSession({userAppAccessId, sessionId}: {userAppAccessId:
     });
 }
 
-export function deleteAppSession({id}: {id: string}) {
+export function deleteAppSession({ id }: { id: string }) {
     return prisma.userAppSession.delete({
         where: {
             id,
@@ -446,7 +455,7 @@ export function deleteAppSession({id}: {id: string}) {
     });
 }
 
-export function getUserAppAccess({id}: {id: string}) {
+export function getUserAppAccess({ id }: { id: string }) {
     return prisma.userAppAccess.findUnique({
         where: {
             id,
@@ -466,7 +475,7 @@ export function getUserAppAccess({id}: {id: string}) {
     });
 }
 
-export async function setUserDisabled({id, disabled}: {id: string, disabled: boolean}) {
+export async function setUserDisabled({ id, disabled }: { id: string, disabled: boolean }) {
     const user = await prisma.user.update({
         where: {
             id,
@@ -476,15 +485,15 @@ export async function setUserDisabled({id, disabled}: {id: string, disabled: boo
         },
     });
     if (disabled) {
-        const sessions = await listSessions({userId: id});
+        const sessions = await listSessions({ userId: id });
         for (const session of sessions) {
-            await deleteSession({sessionId: session.id});
+            await deleteSession({ sessionId: session.id });
         }
     }
     return user;
 }
 
-export async function setTenantLogo({id, logo}: {id: string, logo: string}) {
+export async function setTenantLogo({ id, logo }: { id: string, logo: string }) {
     return prisma.tenant.update({
         where: {
             id,
@@ -495,7 +504,7 @@ export async function setTenantLogo({id, logo}: {id: string, logo: string}) {
     });
 }
 
-export async function setTenantColor({id, color}: {id: string, color: string}) {
+export async function setTenantColor({ id, color }: { id: string, color: string }) {
     return prisma.tenant.update({
         where: {
             id,
@@ -506,7 +515,7 @@ export async function setTenantColor({id, color}: {id: string, color: string}) {
     });
 }
 
-export async function setTenantColorContrast({id, colorContrast}: {id: string, colorContrast: string}) {
+export async function setTenantColorContrast({ id, colorContrast }: { id: string, colorContrast: string }) {
     return prisma.tenant.update({
         where: {
             id,
@@ -517,7 +526,7 @@ export async function setTenantColorContrast({id, colorContrast}: {id: string, c
     });
 }
 
-export async function setTenantDescription({id, description}: {id: string, description: string}) {
+export async function setTenantDescription({ id, description }: { id: string, description: string }) {
     return prisma.tenant.update({
         where: {
             id,
@@ -528,7 +537,7 @@ export async function setTenantDescription({id, description}: {id: string, descr
     });
 }
 
-export async function setTenantDisplayName({id, displayName}: {id: string, displayName: string}) {
+export async function setTenantDisplayName({ id, displayName }: { id: string, displayName: string }) {
     return prisma.tenant.update({
         where: {
             id,
@@ -539,7 +548,7 @@ export async function setTenantDisplayName({id, displayName}: {id: string, displ
     });
 }
 
-export async function verifyDomain({domainId}: {domainId: string}) {
+export async function verifyDomain({ domainId }: { domainId: string }) {
     const domain = await prisma.domain.findUnique({
         where: {
             id: domainId,
@@ -565,7 +574,7 @@ export async function verifyDomain({domainId}: {domainId: string}) {
     });
 }
 
-export async function createDomain({name, creatorId, tenantId}: {name: string, creatorId?: string, tenantId: string}) {
+export async function createDomain({ name, creatorId, tenantId }: { name: string, creatorId?: string, tenantId: string }) {
     return await prisma.domain.create({
         data: {
             name,
@@ -575,7 +584,7 @@ export async function createDomain({name, creatorId, tenantId}: {name: string, c
     });
 }
 
-export async function deleteDomain({id}: {id: string}) {
+export async function deleteDomain({ id }: { id: string }) {
     return await prisma.domain.delete({
         where: {
             id,
@@ -583,7 +592,7 @@ export async function deleteDomain({id}: {id: string}) {
     });
 }
 
-export async function getDomainByName({name}: {name: string}) {
+export async function getDomainByName({ name }: { name: string }) {
     return await prisma.domain.findUnique({
         where: {
             name,
@@ -591,7 +600,7 @@ export async function getDomainByName({name}: {name: string}) {
     });
 }
 
-export async function listDomains({tenantId}: {tenantId: string}) {
+export async function listDomains({ tenantId }: { tenantId: string }) {
     return await prisma.domain.findMany({
         where: {
             tenantId,
@@ -611,7 +620,7 @@ export async function listDomains({tenantId}: {tenantId: string}) {
     });
 }
 
-export async function updateDomain({id, name, creatorId, tenantId}: {id: string, name: string, creatorId?: string, tenantId: string}) {
+export async function updateDomain({ id, name, creatorId, tenantId }: { id: string, name: string, creatorId?: string, tenantId: string }) {
     return await prisma.domain.update({
         where: {
             id,
@@ -624,8 +633,8 @@ export async function updateDomain({id, name, creatorId, tenantId}: {id: string,
     });
 }
 
-export async function getAppSessionToken({appId, userId, sessionId}: {appId: string, userId: string, sessionId: string}) {
-    const appUserAccess = await userHasAppAccess({userId, appId});
+export async function getAppSessionToken({ appId, userId, sessionId }: { appId: string, userId: string, sessionId: string }) {
+    const appUserAccess = await userHasAppAccess({ userId, appId });
     if (!appUserAccess?.id) {
         throw new Error("User app access not found");
     }
@@ -655,6 +664,19 @@ export async function getAppSessionToken({appId, userId, sessionId}: {appId: str
                                 },
                             },
                             tenant: true,
+                            userAppAccess: {
+                                include: {
+                                    app: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            logo: true,
+                                            description: true,
+                                            mainUrl: true
+                                        }
+                                    }
+                                }
+                            }
                         },
                     },
                     app: true,
@@ -664,7 +686,7 @@ export async function getAppSessionToken({appId, userId, sessionId}: {appId: str
     });
 }
 
-export async function getAppSessionById({id}: {id: string}) {
+export async function getAppSessionById({ id }: { id: string }) {
     return await prisma.userAppSession.findUnique({
         where: {
             id,
@@ -697,7 +719,7 @@ export async function getAppSessionById({id}: {id: string}) {
     });
 }
 
-export async function listGroups({tenantId}: {tenantId: string}) {
+export async function listGroups({ tenantId }: { tenantId: string }) {
     return await prisma.group.findMany({
         where: {
             tenantId,
@@ -721,7 +743,7 @@ export async function listGroups({tenantId}: {tenantId: string}) {
     });
 }
 
-export async function createGroup({tenantId, name, description, groupname}: {tenantId: string, name: string, description?: string, groupname: string}) {
+export async function createGroup({ tenantId, name, description, groupname }: { tenantId: string, name: string, description?: string, groupname: string }) {
     return await prisma.group.create({
         data: {
             name,
@@ -732,7 +754,7 @@ export async function createGroup({tenantId, name, description, groupname}: {ten
     });
 }
 
-export async function updateGroup({id, name, description, groupname}: {id: string, name: string, description?: string, groupname: string}) {
+export async function updateGroup({ id, name, description, groupname }: { id: string, name: string, description?: string, groupname: string }) {
     return await prisma.group.update({
         where: {
             id,
@@ -745,7 +767,7 @@ export async function updateGroup({id, name, description, groupname}: {id: strin
     });
 }
 
-export async function deleteGroup({id}: {id: string}) {
+export async function deleteGroup({ id }: { id: string }) {
     return await prisma.group.delete({
         where: {
             id,
@@ -753,7 +775,7 @@ export async function deleteGroup({id}: {id: string}) {
     });
 }
 
-export function getGroupById({id}: {id: string}) {
+export function getGroupById({ id }: { id: string }) {
     return prisma.group.findUnique({
         where: {
             id,
@@ -776,7 +798,7 @@ export function getGroupById({id}: {id: string}) {
     });
 }
 
-export async function addUserToGroup({userId, groupId}: {userId: string, groupId: string}) {
+export async function addUserToGroup({ userId, groupId }: { userId: string, groupId: string }) {
     return await prisma.groupUser.create({
         data: {
             userId,
@@ -804,7 +826,7 @@ export async function addUserToGroup({userId, groupId}: {userId: string, groupId
     });
 }
 
-export async function removeUserFromGroup({userId, groupId}: {userId: string, groupId: string}) {
+export async function removeUserFromGroup({ userId, groupId }: { userId: string, groupId: string }) {
     return await prisma.groupUser.delete({
         where: {
             userId_groupId: {
@@ -815,7 +837,7 @@ export async function removeUserFromGroup({userId, groupId}: {userId: string, gr
     });
 }
 
-export async function AddTenantToApp({tenantId, appId}: {tenantId: string, appId: string}) {
+export async function AddTenantToApp({ tenantId, appId }: { tenantId: string, appId: string }) {
     return await prisma.externalAppAccess.create({
         data: {
             tenantId,
@@ -824,7 +846,7 @@ export async function AddTenantToApp({tenantId, appId}: {tenantId: string, appId
     });
 }
 
-export async function RemoveTenantFromApp({tenantId, appId}: {tenantId: string, appId: string}) {
+export async function RemoveTenantFromApp({ tenantId, appId }: { tenantId: string, appId: string }) {
     return await prisma.externalAppAccess.delete({
         where: {
             appId_tenantId: {
@@ -835,7 +857,7 @@ export async function RemoveTenantFromApp({tenantId, appId}: {tenantId: string, 
     });
 }
 
-export function UpgradeToFullTenant({tenantId}: {tenantId: string}) {
+export function UpgradeToFullTenant({ tenantId }: { tenantId: string }) {
     return prisma.tenant.update({
         where: {
             id: tenantId,
