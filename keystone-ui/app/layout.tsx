@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Figtree } from "next/font/google";
 import "./globals.css";
+import { Suspense } from "react";
 
 const figtree = Figtree({
   variable: "--font-geist-sans",
@@ -19,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${figtree.variable} antialiased`}>{children}</body>
+      <body className={`${figtree.variable} antialiased`}><Suspense fallback={<div>Loading...</div>}>{children}</Suspense></body>
     </html>
   );
 }
