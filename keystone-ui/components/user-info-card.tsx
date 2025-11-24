@@ -41,7 +41,7 @@ export function UserInfoCard({
         <div className="grid gap-3">
           <Row label="Username" value={username} />
           <Row label="Display name" value={displayName} />
-          <Row label="Tenant" value={tenant} />
+          {tenant ? <Row label="Tenant" value={tenant} /> : null}
           <Row label="Role" value={role} />
           <Row label="Email" value={email} />
         </div>

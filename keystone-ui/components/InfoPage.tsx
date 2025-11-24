@@ -1,17 +1,34 @@
-import { KeyRoundIcon, LogInIcon, SparklesIcon } from "lucide-react";
+import { Building2Icon, KeyRoundIcon, LogInIcon, SparklesIcon, UserIcon, UsersIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
 export function InfoBanner() {
     return <div className="info-banner">
         <div className="info-banner-inner">
             <div className="info-banner-left">
-                <KeyRoundIcon size={40}/>
+                <KeyRoundIcon size={40} />
                 <div className="info-banner-title">Quntem KeyStone</div>
                 <div className="info-banner-subtitle">Secure access to your internal tools and applications</div>
                 <div className="info-banner-buttonrow">
-                    <Link href="/get-started"><Button variant="outline" style={{color: "var(--qu-text)"}}><SparklesIcon size={20}/>Get Started</Button></Link>
-                    <Link href="/account"><Button variant="outline" style={{color: "var(--qu-text)"}}><LogInIcon size={20}/>Access My Account</Button></Link>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" style={{ color: "var(--qu-text)" }}><SparklesIcon size={20} />Get Started</Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <DropdownMenuGroup title="KeyStone">
+                                <DropdownMenuLabel>KeyStone</DropdownMenuLabel>
+                                <Link href="/get-started"><DropdownMenuItem><Building2Icon />For Business</DropdownMenuItem></Link>
+                                <Link href="/get-started/team"><DropdownMenuItem><UsersIcon />For Teams</DropdownMenuItem></Link>
+                            </DropdownMenuGroup>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuGroup title="Account">
+                                <DropdownMenuLabel>Account</DropdownMenuLabel>
+                                <Link href="/get-started/personal"><DropdownMenuItem><UserIcon />For Individuals</DropdownMenuItem></Link>
+                            </DropdownMenuGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Link href="/account"><Button variant="outline" style={{ color: "var(--qu-text)" }}><LogInIcon size={20} />Access My Account</Button></Link>
                 </div>
             </div>
         </div>

@@ -28,8 +28,8 @@ model User {
   role           Role            @default(USER)
   username       String
   name           String
-  tenantId       String
-  tenant         tenant          @relation(fields: [tenantId], references: [id])
+  tenantId       String?
+  tenant         tenant?         @relation(fields: [tenantId], references: [id])
   sessions       session[]
   managerId      String?
   manager        User?           @relation(fields: [managerId], references: [id], name: "managerUsers")

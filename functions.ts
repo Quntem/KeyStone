@@ -15,7 +15,7 @@ export function comparePassword(password: string, hashedPassword: string) {
     return bcrypt.compareSync(password, hashedPassword);
 }
 
-export async function createUser({ email, password, name, tenantId, username, role, domainId }: { email: string, password: string, name: string, tenantId: string, username: string, role: string, domainId?: string }) {
+export async function createUser({ email, password, name, tenantId, username, role, domainId }: { email: string, password: string, name: string, tenantId?: string, username: string, role: string, domainId?: string }) {
     var users = await prisma.user.findMany({
         where: {
             tenantId,
@@ -471,6 +471,17 @@ export function getUserAppAccess({ id }: { id: string }) {
                     role: true,
                 },
             }
+        },
+    });
+}
+
+export function getUserAppAccessByUserIdAndAppId({ userId, appId }: { userId: string, appId: string }) {
+    return prisma.userAppAccess.findUnique({
+        where: {
+            userId_appId: {
+                userId,
+                appId,
+            },
         },
     });
 }

@@ -25,7 +25,7 @@ export const UserSidebar = ({ ignoreSize }: { ignoreSize?: boolean }) => {
             <SidebarItem title="Details" onClick={() => { router.push("/account/details") }} Icon={IdCardLanyardIcon} active={path === "/account/details"} index={1} />
             <SidebarItem title="Security" onClick={() => { router.push("/account/security") }} Icon={ShieldIcon} active={path === "/account/security"} index={2} />
             <SidebarItem title="Sessions" onClick={() => { router.push("/account/sessions") }} Icon={LaptopMinimalIcon} active={path === "/account/sessions"} index={3} />
-            <Separator style={{ margin: "10px 0px" }} />
+            {tenant.data?.tenant?.id && <Separator style={{ margin: "10px 0px" }} />}
             {tenant.data?.tenant?.type === "Organization" && <SidebarItem title="Your Apps" onClick={() => { router.push("/apps") }} Icon={LayoutGrid} active={false} index={4} />}
             {session.data?.user?.role === "ADMIN" && tenant.data?.tenant?.type === "Organization" ? <SidebarItem title="Admin" onClick={() => { router.push("/admin") }} Icon={SettingsIcon} active={false} index={5} /> : session.data?.user?.role === "ADMIN" && tenant.data?.tenant?.type === "Team" ? <SidebarItem title="Team Dashboard" onClick={() => { router.push("/team") }} Icon={LayoutDashboard} active={false} index={5} /> : null}
             <Separator style={{ margin: "10px 0px" }} />
@@ -113,9 +113,9 @@ function SidebarUserItem() {
             <Avatar style={{ width: "40px", height: "40px", marginRight: "7px", border: "1px solid #e4e4e7" }}>
                 <AvatarFallback>{session.data?.user?.name?.charAt(0).toUpperCase()}{session.data?.user?.name?.charAt(1).toUpperCase()}</AvatarFallback>
             </Avatar>
-            <div>
+            <div style={{ width: "100%", overflow: "hidden", maxWidth: "100%" }}>
                 <div className="sidebar-user-item-name">{session.data?.user?.name}</div>
-                <div className="sidebar-user-item-tenant">{session.data?.user?.tenant?.name + "/" + session.data?.user?.username}</div>
+                <div className="sidebar-user-item-tenant">{session.data?.user?.tenant?.id ? (session.data?.user?.tenant?.name + "/" + session.data?.user?.username) : session.data?.user?.email}</div>
             </div>
         </div>
     );

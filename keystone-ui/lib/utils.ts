@@ -6,6 +6,5 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const info = {
-    version: "1.1.1"
+  version: "1.2.0"
 }
-    

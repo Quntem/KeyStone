@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
+
         body {
             font-family: Figtree, sans-serif;
             display: flex;
@@ -101,13 +103,35 @@
             font-family: Figtree, sans-serif;
             font-weight: 500;
             font-size: 25px;
+            margin-bottom: 5px;
+        }
+
+        div.desc {
+            margin-bottom: 25px;
+            font-size: 14px;
+            color: #999999;
+        }
+
+        .textlogo {
+            height: 25px;
+            width: auto;
+            margin-right: auto;
         }
     </style>
 </head>
+
 <body>
     <form action="/auth/signin" method="post" id="signinform">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-key-round-icon lucide-key-round"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>
+        <!-- <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            class="lucide lucide-key-round-icon lucide-key-round">
+            <path
+                d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" />
+            <circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />
+        </svg> -->
+        <img src="/static/img/account_text.svg" alt="Logo" class="textlogo">
         <h1>Sign In</h1>
+        <div class="desc">Using your Quntem Account</div>
         <input type="hidden" name="redirectTo" id="redirectTo">
         <label for="username">Username or Email:</label>
         <input type="text" id="username" name="username">
@@ -116,17 +140,29 @@
         <input type="password" id="password" name="password">
         <br>
         <button type="submit">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-in-icon lucide-log-in"><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                class="lucide lucide-log-in-icon lucide-log-in">
+                <path d="m10 17 5-5-5-5" />
+                <path d="M15 12H3" />
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+            </svg>
             <div>Sign In</div>
         </button>
+        <br>
+        <div class="desc" style="margin-bottom: 0px;">Don't have an account? <a
+                href="https://keystone.qplus.cloud/get-started/personal">Sign Up</a>
+        </div>
     </form>
     <div class="logo">
-        <img src="/static/img/logo.svg" alt="Logo" class="logoimg">
-        <div class="logotext">Quntem KeyStone Directory</div>
+        <!-- <img src="/static/img/logo.svg" alt="Logo" class="logoimg"> -->
+        <img src="/static/img/account_text.svg" alt="Logo" class="textlogo">
+        <!-- <div class="logotext">Quntem KeyStone Directory</div> -->
     </div>
     <script>
         var searchparams = new URLSearchParams(window.location.search);
         document.getElementById("redirectTo").value = searchparams.get("redirectTo");
     </script>
 </body>
+
 </html>

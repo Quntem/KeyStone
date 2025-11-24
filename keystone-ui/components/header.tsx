@@ -2,8 +2,8 @@
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { LogOut, useSession } from "@/lib/auth";
 import { JSX, useEffect, useRef, useState } from "react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { ArrowLeftIcon, ChevronDownIcon, LayoutGrid, LogInIcon, LogOutIcon, MenuIcon, SettingsIcon, SparklesIcon, UserIcon } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { ArrowLeftIcon, Building2Icon, ChevronDownIcon, LayoutGrid, LogInIcon, LogOutIcon, MenuIcon, SettingsIcon, SparklesIcon, UserIcon, UsersIcon } from "lucide-react";
 import { useWindowSize } from "@/lib/screensize";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { AdminSidebar, TeamSidebar, UserSidebar } from "./sidebar";
@@ -11,6 +11,8 @@ import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Launcher } from "./launcher";
 import { useTenant } from "@/lib/auth";
+import { DropdownMenuGroup } from "./ui/dropdown-menu";
+import Link from "next/link";
 
 export const Header = ({ title }: { title: string }) => {
     const session = useSession();
@@ -40,7 +42,7 @@ export const Header = ({ title }: { title: string }) => {
             <SidebarDrawer open={open} onOpenChange={setOpen} />
             {(size.width < 1024 && size.width != 0 && !path.startsWith("/apps")) ? <MenuIcon style={{ cursor: "pointer", marginLeft: "5px" }} size="20" onClick={() => { setOpen(true) }} /> : tenant.data?.tenant?.logo ? <><img src={tenant.data?.tenant?.logo} className="header-logo" /><div className="header-logo-divider" /></> : null}
             <div style={{ width: "15px" }} />
-            {tenant.data?.tenant?.type === "Organization" ? <HeaderDropdown user={session} title={title} /> : <div className="header-title">{title}</div>}
+            {tenant.data?.tenant?.id ? (tenant.data?.tenant?.type === "Organization" ? <HeaderDropdown user={session} title={title} /> : <div className="header-title">{title}</div>) : <img src={"/account_text.svg"} className="header-logo" style={{ height: "25px" }} />}
             <div style={{ flex: 1 }} />
             <HeaderUser />
         </header>
@@ -136,8 +138,8 @@ function HeaderUser() {
             <DropdownMenuTrigger asChild>
                 <div className="header-user-container-outer">
                     {(size.width < 550 && size.width != 0) ? null : <div className="header-user-container">
-                        <div className="header-user-text">{session.data?.user?.name} ({session.data?.user?.tenant?.name + "/" + session.data?.user?.username})</div>
-                        <div className="header-company-text">{session.data?.user?.email} ({session.data?.user?.tenant?.name})</div>
+                        <div className="header-user-text">{session.data?.user?.name} {session.data?.user?.tenant?.id ? "(" + session.data?.user?.tenant?.name + "/" + session.data?.user?.username + ")" : ""}</div>
+                        <div className="header-company-text">{session.data?.user?.email} {session.data?.user?.tenant?.id ? "(" + session.data?.user?.tenant?.name + ")" : ""}</div>
                     </div>}
                     <Avatar style={{ width: "30px", height: "30px", marginRight: "10px", border: "1px solid var(--qu-border-color)" }}>
                         <AvatarFallback style={{ color: "var(--qu-text)" }}>{session.data?.user?.name.charAt(0).toUpperCase() + session.data?.user?.name.charAt(1).toUpperCase()}</AvatarFallback>
@@ -164,7 +166,23 @@ export function InfoHeader() {
             <img src={"/logo_text.svg"} style={{ height: 25 }} />
             <div style={{ flex: 1 }} />
             <Button size="sm" variant="outline" style={{ marginRight: "10px" }} onClick={() => { router.push("/account") }}><LogInIcon size={20} />Access My Account</Button>
-            <Button size="sm" style={{ marginRight: "10px" }} onClick={() => { router.push("/get-started") }}><SparklesIcon size={20} />Get Started</Button>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" style={{ marginRight: "10px" }}><SparklesIcon size={20} />Get Started</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                    <DropdownMenuGroup title="KeyStone">
+                        <DropdownMenuLabel>KeyStone</DropdownMenuLabel>
+                        <Link href="/get-started"><DropdownMenuItem><Building2Icon />For Business</DropdownMenuItem></Link>
+                        <Link href="/get-started/team"><DropdownMenuItem><UsersIcon />For Teams</DropdownMenuItem></Link>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup title="Account">
+                        <DropdownMenuLabel>Account</DropdownMenuLabel>
+                        <Link href="/get-started/personal"><DropdownMenuItem><UserIcon />For Individuals</DropdownMenuItem></Link>
+                    </DropdownMenuGroup>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </header>
     );
 }

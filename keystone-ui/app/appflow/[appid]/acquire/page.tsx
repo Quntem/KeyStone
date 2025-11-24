@@ -7,7 +7,7 @@ import { useSession } from "@/lib/auth";
 import { useEffect } from "react";
 import { useTenant } from "@/lib/auth";
 
-export default function GetStartedPage({params}: {params: {appid: string}}) {
+export default function GetStartedPage({ params }: { params: { appid: string } }) {
     const session = useSession();
     const tenant = useTenant();
     useEffect(() => {
@@ -24,12 +24,12 @@ export default function GetStartedPage({params}: {params: {appid: string}}) {
     //         </CardHeader>
     //     </Card>;
     // }
-    return <div className="get-started-page" style={{gap: "20px"}}>
+    return <div className="get-started-page" style={{ gap: "20px" }}>
         {/* <img src={publicApp.data?.tenant?.logo} className="header-logo" /> */}
-        <Card style={{width: "500px"}}>
+        <Card style={{ width: "500px" }}>
             <CardHeader>
-                <CardTitle style={{color: "var(--qu-text)"}}>Sign In With Quntem</CardTitle>
-                <CardDescription style={{color: "var(--qu-text-secondary)"}}>Sign in to {publicApp.data?.app?.name} with your Quntem Account</CardDescription>
+                <CardTitle style={{ color: "var(--qu-text)" }}>Sign In With Quntem</CardTitle>
+                <CardDescription style={{ color: "var(--qu-text-secondary)" }}>Sign in to {publicApp.data?.app?.name} with your Quntem Account</CardDescription>
             </CardHeader>
             <div className="acquire-app-info">
                 <img src={publicApp.data?.app?.logo} className="header-logo" />
@@ -39,21 +39,22 @@ export default function GetStartedPage({params}: {params: {appid: string}}) {
                 </div>
             </div>
             <CardFooter>
-                <div style={{flex: 1}} />
-                <Button variant="outline" style={{color: "var(--qu-text)"}} onClick={() => {
-                    fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/acquireapp/" + params.appid, {
+                <div style={{ flex: 1 }} />
+                <Button variant="outline" style={{ color: "var(--qu-text)" }} onClick={() => {
+                    fetch(process.env.NEXT_PUBLIC_API_URL + "/auth/personal/acquireapp/" + params.appid, {
                         method: "POST",
-                        credentials: "include", 
-                        redirect: "manual", 
+                        credentials: "include",
+                        redirect: "manual",
                         headers: {
                             "Content-Type": "application/json",
                         }
                     }).then((res) => {
+                        const searchParams = new URLSearchParams(window.location.search);
                         if (res.ok) {
-                            window.location.href = tenant.data?.tenant?.type === "Organization" ? "/admin/apps" : "/team/apps";
+                            window.location.href = searchParams.get("redirect") || "/account";
                         }
                     });
-                }}><LogInIcon/>Sign In</Button>
+                }}><LogInIcon />Sign In</Button>
             </CardFooter>
         </Card>
     </div>;
