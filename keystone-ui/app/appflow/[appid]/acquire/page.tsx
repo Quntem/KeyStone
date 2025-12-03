@@ -50,9 +50,7 @@ export default function GetStartedPage({ params }: { params: { appid: string } }
                         }
                     }).then((res) => {
                         const searchParams = new URLSearchParams(window.location.search);
-                        if (res.ok) {
-                            window.location.href = searchParams.get("redirect") || "/account";
-                        }
+                        window.location.href = searchParams.get("redirect") || "/account";
                     });
                 }}><LogInIcon />Sign In</Button>
             </CardFooter>
