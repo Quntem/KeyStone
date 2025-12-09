@@ -79,10 +79,10 @@ router.get("/resources", requireAuth({}), async (req: any, res: any) => {
         return;
     }
     try {
-        const users = await listTenantUsers({ tenantId: app.tenantId })
-        const groups = await listGroups({ tenantId: app.tenantId })
-        const domains = await listDomains({ tenantId: app.tenantId })
-        const apps = await listTenantApps({ tenantId: app.tenantId })
+        const users = await listTenantUsers({ tenantId: req.auth.tenantId })
+        const groups = await listGroups({ tenantId: req.auth.tenantId })
+        const domains = await listDomains({ tenantId: req.auth.tenantId })
+        const apps = await listTenantApps({ tenantId: req.auth.tenantId })
         res.json({
             users,
             groups,
