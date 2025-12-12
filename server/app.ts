@@ -1,5 +1,5 @@
 import express from "express";
-import { getAppSessionById, getAppSessionToken, listDomains, listGroups, listTenantApps, listTenantUsers } from "../functions.ts";
+import { getAppSessionById, getAppSessionToken, getTenantById, listDomains, listGroups, listTenantApps, listTenantUsers } from "../functions.ts";
 import { appAuth, requireAuth } from "../webfunctions.ts";
 import cors from "cors";
 import type { app as AppType } from "../generated/prisma/index.js";
@@ -112,6 +112,7 @@ router.post("/resources/server/:tenantId", async (req: any, res: any) => {
         res.status(401).json({ error: "unauthorized" });
         return;
     }
+    const tenant = await getTenantById({ id: tenantId })
     const users = await listTenantUsers({ tenantId })
     const groups = await listGroups({ tenantId })
     const domains = await listDomains({ tenantId })
@@ -120,7 +121,8 @@ router.post("/resources/server/:tenantId", async (req: any, res: any) => {
         users,
         groups,
         domains,
-        apps
+        apps,
+        tenant
     });
 });
 
