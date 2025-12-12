@@ -2,13 +2,13 @@
   "dependencies": {
     "@prisma/client": "^6.10.1",
     "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
     "express": "^5.1.0",
     "inquirer": "^12.9.3",
     "is-email": "^1.0.2",
     "oidc-provider": "^9.5.1",
-    "prisma": "^6.10.1",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5"
+    "prisma": "^6.10.1"
   },
   "type": "module",
   "devDependencies": {

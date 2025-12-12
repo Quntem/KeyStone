@@ -16,22 +16,22 @@ export function requireRole(role: string) {
 
 export function appAuth() {
     return async (req: any, res: any, next: any) => {
-        const app = await getAppById({id: req.headers["x-app-id"] as string});
+        const app = await getAppById({ id: req.headers["x-app-id"] as string, includeExternal: true });
         req.keystoneApp = app;
         next();
     }
 }
 
-export function requireAuth({redirectTo}: {redirectTo: string}) {
+export function requireAuth({ redirectTo }: { redirectTo: string }) {
     return async (req: any, res: any, next: any) => {
         if (req.headers.authorization) {
             var token = req.headers.authorization.split(" ")[1];
-            var session = await getSession({sessionId: token});
+            var session = await getSession({ sessionId: token });
             if (!session) {
                 console.log("Invalid session");
                 return res.status(401).json({ message: "Unauthorized" });
             }
-            req.auth = await getUserById({id: session.userId});
+            req.auth = await getUserById({ id: session.userId });
             next();
         } else if (!req.cookies?.sessionId) {
             console.log("No session");
@@ -43,7 +43,7 @@ export function requireAuth({redirectTo}: {redirectTo: string}) {
             }
         } else {
             console.log("Session found");
-            var session = await getSession({sessionId: req.cookies.sessionId});
+            var session = await getSession({ sessionId: req.cookies.sessionId });
             if (!session) {
                 res.cookie("sessionId", "", { expires: new Date(0) });
                 console.log("Invalid session");
@@ -54,7 +54,7 @@ export function requireAuth({redirectTo}: {redirectTo: string}) {
                     return res.status(401).json({ message: "Unauthorized" });
                 }
             }
-            req.auth = await getUserById({id: session.userId});
+            req.auth = await getUserById({ id: session.userId });
         }
         next();
     }

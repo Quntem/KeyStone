@@ -2,7 +2,7 @@ import express from "express";
 import { getAppSessionById, getAppSessionToken, listDomains, listGroups, listTenantApps, listTenantUsers } from "../functions.ts";
 import { appAuth, requireAuth } from "../webfunctions.ts";
 import cors from "cors";
-// import { app } from "../generated/prisma/index.js";
+import type { app as AppType } from "../generated/prisma/index.js";
 
 var router = express.Router();
 
@@ -96,16 +96,26 @@ router.get("/resources", requireAuth({}), async (req: any, res: any) => {
     }
 });
 
-router.post("/resources/server", async (req: any, res: any) => {
-    const app = req.app as app
+router.post("/resources/server/:tenantId", async (req: any, res: any) => {
+    const app = req.app as AppType & {
+        inExternalTenants: {
+            tenantId: string
+        }[]
+    }
     if (!app || app.secret != req.headers["Authorization"]?.split(" ")[1]) {
+        // console.log(app.secret != req.headers["Authorization"]?.split(" ")[1] ? "Invalid secret" : "Invalid app")
         res.status(401).json({ error: "Not Valid" });
         return;
     }
-    const users = await listTenantUsers({ tenantId: app.tenantId })
-    const groups = await listGroups({ tenantId: app.tenantId })
-    const domains = await listDomains({ tenantId: app.tenantId })
-    const apps = await listTenantApps({ tenantId: app.tenantId })
+    const tenantId = req.params.tenantId
+    if (!app.inExternalTenants.find((tenant) => tenant.tenantId == tenantId)) {
+        res.status(401).json({ error: "unauthorized" });
+        return;
+    }
+    const users = await listTenantUsers({ tenantId })
+    const groups = await listGroups({ tenantId })
+    const domains = await listDomains({ tenantId })
+    const apps = await listTenantApps({ tenantId })
     res.json({
         users,
         groups,
