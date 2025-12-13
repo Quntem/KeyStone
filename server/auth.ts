@@ -9,7 +9,7 @@ var router = express.Router();
 
 router.use(cors({
     credentials: true,
-    origin: process.env.FRONTEND_URL,
+    origin: [process.env.FRONTEND_URL, process.env.FRONTEND_URL_2, process.env.FRONTEND_URL_3],
 }));
 
 router.get("/signin", async (req: any, res: any) => {

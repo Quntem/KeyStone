@@ -16,11 +16,11 @@ router.use(cors({
 router.use(appAuth());
 
 const corsMiddleware = (req: any, callback: any) => {
-    if (!req.app) {
+    if (!req.keystoneApp) {
         callback(null, false);
         return;
     }
-    if (req.app.mainUrl != req.headers["origin"] as string) {
+    if (req.keystoneApp.mainUrl != req.headers["origin"] as string) {
         callback(null, false);
         return;
     }
@@ -33,7 +33,7 @@ const corsMiddleware = (req: any, callback: any) => {
 router.use(cors(corsMiddleware));
 
 router.get("/getSessionToken", requireAuth({}), async (req: any, res: any) => {
-    if (!req.app) {
+    if (!req.keystoneApp) {
         res.status(404).json({ error: "App not found" });
         return;
     }
