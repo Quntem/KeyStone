@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 var router = express.Router();
 
-import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById } from "../functions.ts";
+import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById } from "../functions.ts";
 import { requireAuth, requireRole } from "../webfunctions.ts";
 
 router.use(express.json());
@@ -160,6 +160,16 @@ router.post("/app/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole
     }
 });
 
+router.get("/app/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var app = await getAppById({ id: req.params.id, includeExternal: true });
+        res.json(app);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
 router.delete("/app/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
         await deleteApp({ id: req.params.id });
@@ -259,6 +269,16 @@ router.get("/domains", requireAuth({ redirectTo: "/auth/signin" }), requireRole(
 router.get("/domain/:id/verify", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
         var domain = await verifyDomain({ domainId: req.params.id });
+        res.json(domain);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.get("/domain/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var domain = await getDomainById({ id: req.params.id });
         res.json(domain);
     } catch (e) {
         //console.log(e);

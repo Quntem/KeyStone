@@ -187,6 +187,11 @@ export async function getUserById({ id }: { id: string }) {
                     tenant: true,
                 },
             },
+            groups: {
+                include: {
+                    group: true,
+                },
+            }
         },
         omit: {
             password: true,
@@ -607,6 +612,14 @@ export async function getDomainByName({ name }: { name: string }) {
     return await prisma.domain.findUnique({
         where: {
             name,
+        },
+    });
+}
+
+export async function getDomainById({ id }: { id: string }) {
+    return await prisma.domain.findUnique({
+        where: {
+            id,
         },
     });
 }
