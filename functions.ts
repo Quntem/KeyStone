@@ -334,7 +334,7 @@ export function getAppById({ id, includeExternal }: { id: string, includeExterna
                     displayName: true,
                 },
             },
-            inExternalTenants: includeExternal ? true : false,
+            inExternalTenants: includeExternal
         },
     });
 }

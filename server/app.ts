@@ -16,12 +16,11 @@ router.use(cors({
 router.use(appAuth());
 
 const corsMiddleware = (req: any, callback: any) => {
-    const app = req.keystoneApp;
-    if (!app) {
+    if (!req.app) {
         callback(null, false);
         return;
     }
-    if (app.mainUrl != req.headers["origin"] as string) {
+    if (req.app.mainUrl != req.headers["origin"] as string) {
         callback(null, false);
         return;
     }
@@ -34,13 +33,12 @@ const corsMiddleware = (req: any, callback: any) => {
 router.use(cors(corsMiddleware));
 
 router.get("/getSessionToken", requireAuth({}), async (req: any, res: any) => {
-    const app = req.keystoneApp;
-    if (!app) {
+    if (!req.keystoneApp) {
         res.status(404).json({ error: "App not found" });
         return;
     }
     try {
-        const session = await getAppSessionToken({ appId: app.id, userId: req.auth.id, sessionId: req.cookies.sessionId });
+        const session = await getAppSessionToken({ appId: req.keystoneApp.id, userId: req.auth.id, sessionId: req.cookies.sessionId });
         if (!session) {
             res.status(401).json({ error: "unauthorized" });
             return;
@@ -55,9 +53,7 @@ router.get("/getSessionToken", requireAuth({}), async (req: any, res: any) => {
 });
 
 router.post("/verifysession", async (req: any, res: any) => {
-    const app = req.app
-    if (!app || app.secret != req.headers["Authorization"]?.split(" ")[1]) {
-        // console.log(app.secret != req.headers["Authorization"]?.split(" ")[1] ? "Invalid secret" : "Invalid app")
+    if (!req.keystoneApp || (req.keystoneApp.secret != req.headers["authorization"]?.split(" ")[1] && req.keystoneApp.secret != req.headers["Authorization"]?.split(" ")[1])) {
         res.status(401).json({ error: "Not Valid" });
         return;
     }
@@ -73,8 +69,7 @@ router.post("/verifysession", async (req: any, res: any) => {
 });
 
 router.get("/resources", requireAuth({}), async (req: any, res: any) => {
-    const app = req.keystoneApp as app;
-    if (!app) {
+    if (!req.keystoneApp) {
         res.status(404).json({ error: "App not found" });
         return;
     }
@@ -96,19 +91,13 @@ router.get("/resources", requireAuth({}), async (req: any, res: any) => {
     }
 });
 
-router.post("/resources/server/:tenantId", async (req: any, res: any) => {
-    const app = req.app as AppType & {
-        inExternalTenants: {
-            tenantId: string
-        }[]
-    }
-    if (!app || app.secret != req.headers["Authorization"]?.split(" ")[1]) {
-        // console.log(app.secret != req.headers["Authorization"]?.split(" ")[1] ? "Invalid secret" : "Invalid app")
+router.get("/resources/server/:tenantId", async (req: any, res: any) => {
+    if (!req.keystoneApp || (req.keystoneApp.secret != req.headers["authorization"]?.split(" ")[1] && req.keystoneApp.secret != req.headers["Authorization"]?.split(" ")[1])) {
         res.status(401).json({ error: "Not Valid" });
         return;
     }
     const tenantId = req.params.tenantId
-    if (!app.inExternalTenants.find((tenant) => tenant.tenantId == tenantId)) {
+    if (!req.keystoneApp.inExternalTenants.find((tenant) => tenant.tenantId == tenantId) && req.keystoneApp.tenantId != tenantId) {
         res.status(401).json({ error: "unauthorized" });
         return;
     }

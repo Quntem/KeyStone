@@ -139,7 +139,7 @@ router.post("/setuserpassword", express.json(), requireAuth({ redirectTo: "/auth
         var user = await SetUserPassword({ userId: req.auth.id, password: req.body.password });
         res.json(user);
     } catch (e) {
-        console.log(e);
+        //console.log(e);
         res.status(400).json({ error: e.message });
     }
 });
@@ -149,7 +149,7 @@ router.patch("/userinfo", express.json(), requireAuth({ redirectTo: "/auth/signi
         var user = await updateUser({ id: req.auth.id, name: req.body.name, email: req.auth.email, username: req.auth.username, role: req.auth.role, domainId: req.auth.domainId });
         res.json(user);
     } catch (e) {
-        console.log(e);
+        //console.log(e);
         res.status(400).json({ error: e.message });
     }
 });
