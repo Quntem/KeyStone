@@ -1,5 +1,5 @@
 import express from "express";
-import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions, deleteSession, listUserAppAccess, listAppSessions, createAppSession, getUserIdByEmail, createTenant, createUser, getDomainByName, createDomain, updateDomain, updateUser, SetUserPassword, getAppById, getUserAppAccess, getUserAppAccessByUserIdAndAppId, grantUserAppAccess } from "../functions.ts";
+import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions, deleteSession, listUserAppAccess, listAppSessions, createAppSession, getUserIdByEmail, createTenant, createUser, getDomainByName, createDomain, updateDomain, updateUser, SetUserPassword, getAppById, getUserAppAccess, getUserAppAccessByUserIdAndAppId, grantUserAppAccess, createGroup } from "../functions.ts";
 import bodyParser from "body-parser";
 import { requireAuth } from "../webfunctions.ts";
 import isEmail from "is-email";
@@ -255,5 +255,15 @@ router.get("/publicapp/:appid", async (req: any, res: any) => {
         }
     });
 })
+
+router.post("/createGroup", requireAuth({ redirectTo: "/auth/signin" }), async (req: any, res: any) => {
+    try {
+        var group = await createGroup({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), createdBy: req.auth.id, adminCreated: false, type: "Functional" });
+        res.json(group);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
 
 export { router }

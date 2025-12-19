@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 var router = express.Router();
 
-import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById } from "../functions.ts";
+import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, setTenantGroupCreationPermition } from "../functions.ts";
 import { requireAuth, requireRole } from "../webfunctions.ts";
 
 router.use(express.json());
@@ -122,6 +122,16 @@ router.post("/tenant/description", requireAuth({ redirectTo: "/auth/signin" }), 
 router.post("/tenant/displayname", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
         await setTenantDisplayName({ id: req.auth.tenantId, displayName: req.body.displayName });
+        res.json({ success: true });
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.post("/tenant/setGroupCreationPermition", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        await setTenantGroupCreationPermition({ id: req.auth.tenantId, allowGroupCreation: req.body.allowGroupCreation });
         res.json({ success: true });
     } catch (e) {
         //console.log(e);
@@ -308,7 +318,7 @@ router.get("/group/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRol
 
 router.post("/group", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        var group = await createGroup({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, "") });
+        var group = await createGroup({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), createdBy: req.auth.id, adminCreated: true, type: req.body.type || "Organizational" });
         res.json(group);
     } catch (e) {
         //console.log(e);

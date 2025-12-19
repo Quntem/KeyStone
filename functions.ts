@@ -1,4 +1,4 @@
-import { PrismaClient, Role, TenantType } from "./generated/prisma/index.js";
+import { GroupType, PrismaClient, Role, TenantType } from "./generated/prisma/index.js";
 import * as bcrypt from "bcrypt";
 import * as dns from "dns/promises";
 
@@ -553,6 +553,17 @@ export async function setTenantDescription({ id, description }: { id: string, de
     });
 }
 
+export async function setTenantGroupCreationPermition({ id, allowGroupCreation }: { id: string, allowGroupCreation: boolean }) {
+    return prisma.tenant.update({
+        where: {
+            id,
+        },
+        data: {
+            allowGroupCreation,
+        },
+    });
+}
+
 export async function setTenantDisplayName({ id, displayName }: { id: string, displayName: string }) {
     return prisma.tenant.update({
         where: {
@@ -767,13 +778,16 @@ export async function listGroups({ tenantId }: { tenantId: string }) {
     });
 }
 
-export async function createGroup({ tenantId, name, description, groupname }: { tenantId: string, name: string, description?: string, groupname: string }) {
+export async function createGroup({ tenantId, name, description, groupname, createdBy, adminCreated, type }: { tenantId: string, name: string, description?: string, groupname: string, createdBy: string, adminCreated: boolean, type: GroupType }) {
     return await prisma.group.create({
         data: {
             name,
             groupname,
             description,
             tenantId,
+            adminCreated,
+            createdBy,
+            type,
         },
     });
 }

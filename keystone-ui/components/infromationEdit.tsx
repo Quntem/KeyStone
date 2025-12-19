@@ -3,9 +3,10 @@ import { Button } from "./ui/button";
 import { SaveIcon, XIcon } from "lucide-react";
 import { Input } from "./ui/input";
 import { useState } from "react";
-import { setTenantDescription, setTenantDisplayName, setTenantLogo } from "@/lib/admin";
+import { setTenantDescription, setTenantDisplayName, setTenantGroupCreationPermition, setTenantLogo } from "@/lib/admin";
 import { setDisplayName, setPassword } from "@/lib/auth";
 import { toast } from "sonner";
+import { Switch } from "./ui/switch";
 export function SetLogo({ defaultLogo }: { defaultLogo: string }) {
     const [originalLogo, setOriginalLogo] = useState(defaultLogo);
     const [logo, setLogo] = useState(defaultLogo);
@@ -56,6 +57,24 @@ export function SetDisplayName({ defaultDisplayName }: { defaultDisplayName: str
         <CardFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>
             <Button variant="outline" disabled={displayName === originalDisplayName} onClick={() => { setTenantDisplayName(displayName).then(() => { setOriginalDisplayName(displayName) }); }}><SaveIcon size={20} />Save</Button>
             <Button variant="outline" onClick={() => setDisplayName("")}><XIcon size={20} />Remove</Button>
+        </CardFooter>
+    </Card>
+}
+
+export function SetGroupCreationPermission({ defaultGroupCreationPermission }: { defaultGroupCreationPermission: boolean }) {
+    const [originalGroupCreationPermission, setOriginalGroupCreationPermission] = useState(defaultGroupCreationPermission);
+    const [groupCreationPermission, setGroupCreationPermission] = useState(defaultGroupCreationPermission);
+    return <Card>
+        <CardHeader>
+            <CardTitle>Set Group Creation Permission</CardTitle>
+            <CardDescription>Allow users to create functional groups</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Switch checked={groupCreationPermission} onCheckedChange={setGroupCreationPermission} />
+        </CardContent>
+        <CardFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>
+            <Button variant="outline" disabled={groupCreationPermission === originalGroupCreationPermission} onClick={() => { setTenantGroupCreationPermition(groupCreationPermission).then(() => { setOriginalGroupCreationPermission(groupCreationPermission) }); }}><SaveIcon size={20} />Save</Button>
+            <Button variant="outline" onClick={() => setGroupCreationPermission(false)}><XIcon size={20} />Remove</Button>
         </CardFooter>
     </Card>
 }

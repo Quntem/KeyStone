@@ -68,17 +68,19 @@ model tenant {
 }
 
 model group {
-  id          String      @id @default(cuid())
-  name        String
-  description String?
-  groupname   String      @unique
-  users       groupUser[]
-  type        GroupType   @default(Organizational)
-  tenantId    String
-  tenant      tenant      @relation(fields: [tenantId], references: [id])
-  domainId    String?
-  domain      domain?     @relation(fields: [domainId], references: [id], name: "domainGroups")
-  email       String?
+  id           String      @id @default(cuid())
+  name         String
+  description  String?
+  groupname    String      @unique
+  users        groupUser[]
+  type         GroupType   @default(Organizational)
+  tenantId     String
+  tenant       tenant      @relation(fields: [tenantId], references: [id])
+  domainId     String?
+  domain       domain?     @relation(fields: [domainId], references: [id], name: "domainGroups")
+  email        String?
+  createdBy    String?
+  adminCreated Boolean     @default(false)
 }
 
 enum GroupType {
