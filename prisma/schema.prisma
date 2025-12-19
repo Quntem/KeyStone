@@ -48,22 +48,23 @@ enum TenantType {
 }
 
 model tenant {
-  displayName       String?
-  id                String              @id @default(cuid())
-  name              String              @unique
-  logo              String?
-  color             String?
-  description       String?
-  colorContrast     String?
-  users             User[]
-  parentTenantId    String?
-  parentTenant      tenant?             @relation(fields: [parentTenantId], references: [id], name: "tenantChildren")
-  tenantChildren    tenant[]            @relation(name: "tenantChildren")
-  apps              app[]
-  domains           domain[]            @relation(name: "tenantDomains")
-  groups            group[]
-  externalAppAccess ExternalAppAccess[]
-  type              TenantType          @default(Organization)
+  displayName        String?
+  id                 String              @id @default(cuid())
+  name               String              @unique
+  logo               String?
+  color              String?
+  description        String?
+  colorContrast      String?
+  users              User[]
+  parentTenantId     String?
+  parentTenant       tenant?             @relation(fields: [parentTenantId], references: [id], name: "tenantChildren")
+  tenantChildren     tenant[]            @relation(name: "tenantChildren")
+  apps               app[]
+  domains            domain[]            @relation(name: "tenantDomains")
+  groups             group[]
+  externalAppAccess  ExternalAppAccess[]
+  type               TenantType          @default(Organization)
+  allowGroupCreation Boolean             @default(false)
 }
 
 model group {
@@ -75,6 +76,9 @@ model group {
   type        GroupType   @default(Organizational)
   tenantId    String
   tenant      tenant      @relation(fields: [tenantId], references: [id])
+  domainId    String?
+  domain      domain?     @relation(fields: [domainId], references: [id], name: "domainGroups")
+  email       String?
 }
 
 enum GroupType {
@@ -166,4 +170,5 @@ model domain {
   tenant      tenant?  @relation(fields: [tenantId], references: [id], name: "tenantDomains")
   hasMXRecord Boolean  @default(false)
   domainUsers User[]   @relation(name: "domainUsers")
+  groups      group[]  @relation(name: "domainGroups")
 }
