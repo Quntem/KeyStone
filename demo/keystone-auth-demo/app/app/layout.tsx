@@ -29,9 +29,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const auth = useAuth({ appId: process.env.NEXT_PUBLIC_KEYSTONE_APPID as string, keystoneUrl: keystoneUrl });
     return <authContext.Provider value={{ auth, team, setTeam, keystoneUrl, setKeystoneUrl }}><div className="w-screen h-screen fixed flex flex-col">
         <div className="px-2 h-[55px] max-h-[55px] min-h-[55px] border-b-1 flex flex-row items-center w-full">
-            <TeamSwitcher />
+            <img src={auth.data?.app.logo} className="w-8 h-8 mr-2 ml-0.5" alt="Tenant Logo" />
+            <div className="bg-gray-300 mx-1.5" style={{
+                height: "18px",
+                width: "2px",
+                rotate: "20deg",
+                borderRadius: "1px",
+            }} />
+            <TeamSwitcher type="ghost" />
+            <div className="bg-gray-300 ml-1.5" style={{
+                height: "18px",
+                width: "2px",
+                rotate: "20deg",
+                borderRadius: "1px",
+            }} />
+            <div className="pl-4">Home</div>
         </div>
-        <div className="flex-1 max-h-[calc(100vh-55px)] overflow-y-auto">
+        <div className="flex-1 max-h-[calc(100vh-55px)] overflow-y-auto bg-neutral-100">
             {children}
         </div>
     </div></authContext.Provider>;

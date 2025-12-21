@@ -25,7 +25,7 @@ import { useState } from "react"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group"
 import { Input } from "./ui/input"
 
-export function TeamSwitcher() {
+export function TeamSwitcher({ type }: { type?: "ghost" | "default" }) {
     const { auth, team, setTeam } = React.useContext(authContext);
     const [open, setOpen] = React.useState(false)
     const [createOpen, setCreateOpen] = React.useState(false)
@@ -35,10 +35,11 @@ export function TeamSwitcher() {
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                     <Button
-                        variant="outline"
+                        variant={type === "ghost" ? "ghost" : "outline"}
                         role="combobox"
                         aria-expanded={open}
-                        className="w-[200px]"
+                        size={type === "ghost" ? "sm" : "default"}
+                        className={type === "ghost" ? "" : "w-[200px]"}
                     >
                         {team?.group.type === "personal" ? <UserIcon /> : <UsersIcon />}
                         {team
@@ -47,7 +48,7 @@ export function TeamSwitcher() {
                         <ChevronsUpDown className="opacity-50 ml-auto" />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[200px] p-0">
+                <PopoverContent align="start" className="w-[200px] p-0">
                     <Command>
                         <CommandInput placeholder="Search teams..." className="h-9" />
                         <CommandList>
@@ -87,6 +88,7 @@ export function TeamSwitcher() {
                                             setTeam(group)
                                             setOpen(false)
                                         }}
+                                        keywords={[group.group.name]}
                                     >
                                         <UsersIcon />
                                         {group.group.name}
