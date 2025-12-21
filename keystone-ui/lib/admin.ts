@@ -430,13 +430,13 @@ export function setUserPassword({ userId, password }: { userId: string, password
     });
 }
 
-export function updateApp({ appId, name, description, logo, mainUrl, availableForExternal }: { appId: string, name: string, description: string, logo: string, mainUrl: string, availableForExternal: boolean }) {
+export function updateApp({ appId, name, description, logo, mainUrl, availableForExternal, allowedURLs }: { appId: string, name: string, description: string, logo: string, mainUrl: string, availableForExternal: boolean, allowedURLs: string[] }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/app/" + appId, {
             credentials: "include",
             redirect: "manual",
             method: "POST",
-            body: JSON.stringify({ name, description, logo, mainUrl, availableForExternal }),
+            body: JSON.stringify({ name, description, logo, mainUrl, availableForExternal, allowedURLs }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",

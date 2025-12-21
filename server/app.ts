@@ -20,7 +20,7 @@ const corsMiddleware = (req: any, callback: any) => {
         callback(null, false);
         return;
     }
-    if (req.keystoneApp.mainUrl != req.headers["origin"] as string) {
+    if (req.keystoneApp.mainUrl != req.headers["origin"] as string && !req.keystoneApp.allowedURLs.includes(req.headers["origin"] as string)) {
         callback(null, false);
         return;
     }

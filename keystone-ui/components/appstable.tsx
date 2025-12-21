@@ -8,7 +8,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-  } from "@/components/ui/table"
+} from "@/components/ui/table"
 import { useEffect, useState } from "react";
 import {
     Drawer,
@@ -22,14 +22,15 @@ import {
 } from "@/components/ui/drawer"
 import { Separator } from "@/components/ui/separator";
 import { Button } from "./ui/button";
-import { CheckIcon, PlusIcon, SaveIcon, SearchIcon, XIcon } from "lucide-react";
+import { CheckIcon, PlusIcon, SaveIcon, SearchIcon, Trash2Icon, XIcon } from "lucide-react";
 import { InputField, PrefixedInput, SwitchInput } from "./userstable";
 import { useSession } from "@/lib/auth";
 import { UserItem } from "./header";
 import { ConfirmDialog } from "./confirmDialog";
 import { CopyValueRow } from "./domainstable";
+import { Input } from "./ui/input";
 
-export function AppsTable({appsListHook}: {appsListHook: any}) {
+export function AppsTable({ appsListHook }: { appsListHook: any }) {
     const [apps, setApps] = useState<any>([]);
     useEffect(() => {
         if (appsListHook.loaded) {
@@ -84,7 +85,7 @@ export function AppsTable({appsListHook}: {appsListHook: any}) {
     );
 }
 
-const TableRowWithDrawer = ({row, appsListHook}: {row: Row<any>, appsListHook: any}) => {
+const TableRowWithDrawer = ({ row, appsListHook }: { row: Row<any>, appsListHook: any }) => {
     const [open, setOpen] = useState(false);
     return (
         <>
@@ -100,7 +101,7 @@ const TableRowWithDrawer = ({row, appsListHook}: {row: Row<any>, appsListHook: a
     );
 }
 
-function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOpen: (open: boolean) => void, app: any, appsListHook: any}) {
+function AppInfoDrawer({ open, setOpen, app, appsListHook }: { open: boolean, setOpen: (open: boolean) => void, app: any, appsListHook: any }) {
     const [userAppAccess, setUserAppAccess] = useState<any>(app.userAppAccess);
     useEffect(() => {
         setUserAppAccess(app.userAppAccess);
@@ -111,6 +112,7 @@ function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOp
     const [mainUrl, setMainUrl] = useState(app.mainUrl);
     const [availableForExternal, setAvailableForExternal] = useState(app.availableForExternal);
     const session = useSession();
+    const [allowedURLs, setAllowedURLs] = useState(app.allowedURLs);
     return (
         <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen} onClose={() => {
             if (userAppAccess.length > app.userAppAccess.length || userAppAccess.length < app.userAppAccess.length) {
@@ -127,87 +129,89 @@ function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOp
                 <Separator />
                 <div className="drawer-mainarea">
                     {app.tenantId === session.data?.user?.tenantId ? <>
-                    <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>App Options</div>
-                    <div style={{fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)"}}>Basic Information about the app</div>
-                    <InputField label="Name" value={name} setValue={setName} />
-                    <InputField label="Description" value={description} setValue={setDescription} />
-                    <InputField label="Logo" value={logo} setValue={setLogo} />
-                    <InputField label="Main URL" value={mainUrl} setValue={setMainUrl} />
-                    <CopyValueRow title="App ID" value={app.id} />
-                    <CopyValueRow title="App Secret" value={app.secret} />
+                        <div style={{ fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px" }}>App Options</div>
+                        <div style={{ fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)" }}>Basic Information about the app</div>
+                        <InputField label="Name" value={name} setValue={setName} />
+                        <InputField label="Description" value={description} setValue={setDescription} />
+                        <InputField label="Logo" value={logo} setValue={setLogo} />
+                        <InputField label="Main URL" value={mainUrl} setValue={setMainUrl} />
+                        <ListEditorfield list={allowedURLs} setList={setAllowedURLs} title="Allowed URLs" />
+                        <CopyValueRow title="App ID" value={app.id} />
+                        <CopyValueRow title="App Secret" value={app.secret} />
 
-                    <div className="p-[20px_20px_0px_20px] flex flex-row gap-2 items-center justify-end">
-                        <Button variant="outline" disabled={name === app.name && description === app.description && logo === app.logo && mainUrl === app.mainUrl} onClick={() => {
-                            setLogo(app.logo);
-                            setName(app.name);
-                            setDescription(app.description);
-                            setMainUrl(app.mainUrl);
-                        }}><XIcon size={20} />Discard Changes</Button>
-                        <Button disabled={name === app.name && description === app.description && logo === app.logo && mainUrl === app.mainUrl} onClick={() => {
-                            updateApp({appId: app.id, name, description, logo, mainUrl, availableForExternal}).then(() => {
-                                setOpen(false);
-                                setTimeout(() => {
-                                    appsListHook.reload();
-                                }, 1000);
-                            });
-                        }}><SaveIcon size={20} />Save</Button>
-                    </div>
+                        <div className="p-[20px_20px_0px_20px] flex flex-row gap-2 items-center justify-end">
+                            <Button variant="outline" disabled={name === app.name && description === app.description && logo === app.logo && mainUrl === app.mainUrl && allowedURLs === app.allowedURLs} onClick={() => {
+                                setLogo(app.logo);
+                                setName(app.name);
+                                setDescription(app.description);
+                                setMainUrl(app.mainUrl);
+                                setAllowedURLs(app.allowedURLs);
+                            }}><XIcon size={20} />Discard Changes</Button>
+                            <Button disabled={name === app.name && description === app.description && logo === app.logo && mainUrl === app.mainUrl && allowedURLs === app.allowedURLs} onClick={() => {
+                                updateApp({ appId: app.id, name, description, logo, mainUrl, availableForExternal, allowedURLs }).then(() => {
+                                    setOpen(false);
+                                    setTimeout(() => {
+                                        appsListHook.reload();
+                                    }, 2000);
+                                });
+                            }}><SaveIcon size={20} />Save</Button>
+                        </div>
                     </> : <div>
-                        <div className="acquire-app-info" style={{marginTop: "20px"}}>
+                        <div className="acquire-app-info" style={{ marginTop: "20px" }}>
                             <img src={app.logo} className="header-logo" />
                             <div className="acquire-app-info-text">
                                 <div className="acquire-app-info-text-title">{app.name}</div>
                                 <div className="acquire-app-info-text-published">Published By {app.tenant?.displayName ? app.tenant?.displayName : app.tenant?.name}</div>
                             </div>
                         </div>
-                        <div className="acquire-app-info-description" style={{marginTop: "10px"}}>{app.description}</div>    
+                        <div className="acquire-app-info-description" style={{ marginTop: "10px" }}>{app.description}</div>
                     </div>}
-                    <Separator style={{marginTop: "25px"}} />
+                    <Separator style={{ marginTop: "25px" }} />
 
-                    <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>App Access</div>
-                    <div style={{fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)"}}>Who can access this app</div>
+                    <div style={{ fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px" }}>App Access</div>
+                    <div style={{ fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)" }}>Who can access this app</div>
                     <UserSearchInput onUserSelect={(user) => {
-                        AddUserToApp({userId: user.id, appId: app.id}).then((data) => {
+                        AddUserToApp({ userId: user.id, appId: app.id }).then((data) => {
                             setUserAppAccess([...userAppAccess, data]);
                         });
                     }} />
-                        
-                    <div style={{margin: "20px 20px 0px 20px"}}>
-                        <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>Users with access</div>
+
+                    <div style={{ margin: "20px 20px 0px 20px" }}>
+                        <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>Users with access</div>
                         <div className="p-3 flex flex-col gap-3 shadow-sm rounded-md bg-card">{userAppAccess?.map((userAppAccessItem: any) => (
                             <UserAppAccessRow key={userAppAccessItem.id} userAppAccess={userAppAccessItem} setUserAppAccess={setUserAppAccess} userAppAccessList={userAppAccess} appId={app.id} />
                         ))}</div>
                     </div>
                     {app.tenantId === session.data?.user?.tenantId ? <>
-                    <Separator style={{marginTop: "25px"}} />
+                        <Separator style={{ marginTop: "25px" }} />
 
-                    <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>App Visibility</div>
-                    <div style={{fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)"}}>Manage how external tenants can acquire this app</div>
-                    <SwitchInput label="Enable Public Link" value={availableForExternal} setValue={setAvailableForExternal} />
-                    {availableForExternal && <CopyValueRow title="Public Link" value={window.location.origin + "/acquireapp/" + app.id} />}
+                        <div style={{ fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px" }}>App Visibility</div>
+                        <div style={{ fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)" }}>Manage how external tenants can acquire this app</div>
+                        <SwitchInput label="Enable Public Link" value={availableForExternal} setValue={setAvailableForExternal} />
+                        {availableForExternal && <CopyValueRow title="Public Link" value={window.location.origin + "/acquireapp/" + app.id} />}
 
-                    <div className="p-[20px_20px_0px_20px] flex flex-row gap-2 items-center justify-end">
-                        <Button variant="outline" disabled={availableForExternal === app.availableForExternal} onClick={() => {
-                            setAvailableForExternal(app.availableForExternal);
-                        }}><XIcon size={20} />Discard Changes</Button>
-                        <Button disabled={availableForExternal === app.availableForExternal} onClick={() => {
-                            updateApp({appId: app.id, name, description, logo, mainUrl, availableForExternal}).then(() => {
-                                setOpen(false);
-                                setTimeout(() => {
-                                    appsListHook.reload();
-                                }, 1000);
-                            });
-                        }}><SaveIcon size={20} />Save</Button>
-                    </div>
+                        <div className="p-[20px_20px_0px_20px] flex flex-row gap-2 items-center justify-end">
+                            <Button variant="outline" disabled={availableForExternal === app.availableForExternal} onClick={() => {
+                                setAvailableForExternal(app.availableForExternal);
+                            }}><XIcon size={20} />Discard Changes</Button>
+                            <Button disabled={availableForExternal === app.availableForExternal} onClick={() => {
+                                updateApp({ appId: app.id, name, description, logo, mainUrl, availableForExternal }).then(() => {
+                                    setOpen(false);
+                                    setTimeout(() => {
+                                        appsListHook.reload();
+                                    }, 1000);
+                                });
+                            }}><SaveIcon size={20} />Save</Button>
+                        </div>
 
-                    <Separator style={{marginTop: "25px"}} />
+                        <Separator style={{ marginTop: "25px" }} />
 
-                    {/* <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>External Access</div>
+                        {/* <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>External Access</div>
                     <div style={{fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)"}}>Manage which external tenants can access this app</div> */}
                     </> : <></>}
                 </div>
                 <Separator />
-                <DrawerFooter style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end"}}>
+                <DrawerFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
                     <DrawerClose><Button><XIcon size={20} />Close</Button></DrawerClose>
                 </DrawerFooter>
             </DrawerContent>
@@ -215,13 +219,13 @@ function AppInfoDrawer({open, setOpen, app, appsListHook}: {open: boolean, setOp
     );
 }
 
-function UserAppAccessRow({userAppAccess, setUserAppAccess, userAppAccessList, appId}: {userAppAccess: any, setUserAppAccess: (userAppAccess: any) => void, userAppAccessList: any, appId: string}) {
+function UserAppAccessRow({ userAppAccess, setUserAppAccess, userAppAccessList, appId }: { userAppAccess: any, setUserAppAccess: (userAppAccess: any) => void, userAppAccessList: any, appId: string }) {
     const [confirmOpen, setConfirmOpen] = useState(false);
     return (
         <UserItem user={userAppAccess.user} Extra={
             <>
                 <ConfirmDialog title="Remove User" description="Are you sure you want to remove this user from the app?" isOpen={confirmOpen} onConfirm={() => {
-                    removeUserFromApp({accessId: userAppAccess.id, appId}).then(() => {
+                    removeUserFromApp({ accessId: userAppAccess.id, appId }).then(() => {
                         setUserAppAccess(userAppAccessList.filter((userAppAccessItem: any) => userAppAccessItem.id !== userAppAccess.id));
                     });
                 }} onClose={() => {
@@ -235,7 +239,7 @@ function UserAppAccessRow({userAppAccess, setUserAppAccess, userAppAccessList, a
     );
 }
 
-export function AddAppDrawer({open, setOpen, appsListHook}: {open: boolean, setOpen: (open: boolean) => void, appsListHook: any}) {
+export function AddAppDrawer({ open, setOpen, appsListHook }: { open: boolean, setOpen: (open: boolean) => void, appsListHook: any }) {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [logo, setLogo] = useState("");
@@ -247,7 +251,7 @@ export function AddAppDrawer({open, setOpen, appsListHook}: {open: boolean, setO
             </DrawerTrigger>
             <DrawerContent>
                 <DrawerHeader>
-                    <DrawerTitle style={{color: "var(--qu-text)", fontWeight: "500"}}>Add App</DrawerTitle>
+                    <DrawerTitle style={{ color: "var(--qu-text)", fontWeight: "500" }}>Add App</DrawerTitle>
                 </DrawerHeader>
                 <Separator />
                 <div className="drawer-mainarea">
@@ -257,10 +261,10 @@ export function AddAppDrawer({open, setOpen, appsListHook}: {open: boolean, setO
                     <InputField label="Main URL" value={mainUrl} setValue={setMainUrl} />
                 </div>
                 <Separator />
-                <DrawerFooter style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end"}}>
+                <DrawerFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
                     <Button variant="outline" onClick={() => setOpen(false)}><XIcon size={20} />Cancel</Button>
                     <Button onClick={async () => {
-                        await CreateApp({name, description, logo, mainUrl});
+                        await CreateApp({ name, description, logo, mainUrl });
                         setOpen(false);
                         appsListHook.reload();
                     }}><CheckIcon size={20} />Add</Button>
@@ -270,16 +274,16 @@ export function AddAppDrawer({open, setOpen, appsListHook}: {open: boolean, setO
     );
 }
 
-export function UserSearchInput({onUserSelect}: {onUserSelect: (user: any) => any}) {
+export function UserSearchInput({ onUserSelect }: { onUserSelect: (user: any) => any }) {
     const session = useSession();
     const [value, setValue] = useState("");
     const [user, setUser] = useState<any>(null);
     return (
-        <div style={{padding: "20px 20px 0px 20px"}}>
-            <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>Find User</div>
-            <div style={{display: "flex", flexDirection: "row", alignItems: "center", gap: "10px"}}>
+        <div style={{ padding: "20px 20px 0px 20px" }}>
+            <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>Find User</div>
+            <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "10px" }}>
                 <div className="flex items-center border border-input rounded-md shadow-xs bg-background focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px] transition-[color,box-shadow] px-3 h-9 text-base w-full">
-                    <span style={{color: "var(--qu-text-secondary)"}} className="select-none text-[14px]">{session?.data?.user?.tenant.name + "/"}</span>
+                    <span style={{ color: "var(--qu-text-secondary)" }} className="select-none text-[14px]">{session?.data?.user?.tenant.name + "/"}</span>
                     <input type="text" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => {
                         if (e.key === "Enter") {
                             getUserByUsername(value).then((data) => {
@@ -313,4 +317,34 @@ export function UserSearchInput({onUserSelect}: {onUserSelect: (user: any) => an
             </div>}
         </div>
     );
+}
+
+function ListEditor({ list, setList }: { list: any, setList: any }) {
+    const [value, setValue] = useState("");
+    return <div>
+        <Input placeholder="Add item" className="bg-white" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => {
+            if (e.key === "Enter") {
+                setList([...list, value]);
+                setValue("");
+            }
+        }} />
+        {list.length > 0 && <div className="flex flex-col bg-white rounded-md border-1 shadow-sm mt-2">
+            {list.map((item: any, index: number) => {
+                return <div key={index}><div className="flex items-center gap-2 p-2 px-3">
+                    {item}
+                    <div className="flex-1" />
+                    <Trash2Icon size={16} onClick={() => {
+                        setList(list.filter((_, i) => i !== index));
+                    }} />
+                </div>{index < list.length - 1 && <Separator />}</div>
+            })}
+        </div>}
+    </div>
+}
+
+function ListEditorfield({ list, setList, title }: { list: any, setList: any, title: string }) {
+    return <div className="p-[20px] pb-0">
+        <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>{title}</div>
+        <ListEditor list={list} setList={setList} />
+    </div>;
 }
