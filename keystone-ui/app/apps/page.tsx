@@ -17,14 +17,14 @@ export default function AccountLayout() {
     );
 }
 
-function AppItem({app}: {app: any}) {
+function AppItem({ app }: { app: any }) {
     return (
         <div className="app-page-item" onClick={() => {
             open(app.mainUrl, "_blank");
         }}>
             <img src={app.logo} className="app-page-item-logo" />
-            <div className="app-page-item-title">{app.name}</div>
-            <div className="app-page-item-subtitle">{app.description}</div>
+            <div className="app-page-item-title text-ellipsis text-center">{app.name}</div>
+            <div className="app-page-item-subtitle text-ellipsis text-center">{app.description}</div>
         </div>
     );
 }

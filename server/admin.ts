@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 var router = express.Router();
 
-import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, setTenantGroupCreationPermition } from "../functions.ts";
+import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, setTenantGroupCreationPermition, listDevices, createDevice, updateDevice, deleteDevice, addDeviceToGroup, updateMDMServer, deleteMDMServer, listMDMServers, createMDMServer } from "../functions.ts";
 import { requireAuth, requireRole } from "../webfunctions.ts";
 
 router.use(express.json());
@@ -356,6 +356,16 @@ router.post("/group/:id/user", requireAuth({ redirectTo: "/auth/signin" }), requ
     }
 });
 
+router.post("/group/:id/device", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var groupDevice = await addDeviceToGroup({ deviceId: req.body.deviceId, groupId: req.params.id });
+        res.json(groupDevice);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
 router.delete("/group/:id/user", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
         var groupUser = await removeUserFromGroup({ userId: req.body.userId, groupId: req.params.id });
@@ -389,6 +399,82 @@ router.post("/upgradetofulltenant", requireAuth({ redirectTo: "/auth/signin" }),
         res.json(tenant);
     } catch (e) {
         //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.get("/devices", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var devices = await listDevices({ tenantId: req.auth.tenantId });
+        res.json(devices);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.post("/device", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var device = await createDevice({ name: req.body.name, hardwareType: req.body.hardwareType, softwareType: req.body.softwareType, os: req.body.os, osVersion: req.body.osVersion, assignedTo: req.body.assignedTo, mdmServerId: req.body.mdmServerId, extraInfo: req.body.extraInfo, displayName: req.body.displayName, tenantId: req.auth.tenantId });
+        res.json(device);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.post("/device/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var device = await updateDevice({ id: req.params.id, name: req.body.name, hardwareType: req.body.hardwareType, softwareType: req.body.softwareType, os: req.body.os, osVersion: req.body.osVersion, assignedTo: req.body.assignedTo, mdmServerId: req.body.mdmServerId, extraInfo: req.body.extraInfo, displayName: req.body.displayName });
+        res.json(device);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.delete("/device/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var device = await deleteDevice({ id: req.params.id });
+        res.json(device);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.post("/mdmserver", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var mdmServer = await createMDMServer({ name: req.body.name, tenantId: req.auth.tenantId, url: req.body.url, enrollmentUrl: req.body.enrollmentUrl, unenrollmentUrl: req.body.unenrollmentUrl, enrollmentToken: req.body.enrollmentToken, isDefault: req.body.isDefault });
+        res.json(mdmServer);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.post("/mdmserver/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var mdmServer = await updateMDMServer({ id: req.params.id, name: req.body.name, tenantId: req.auth.tenantId, url: req.body.url, enrollmentUrl: req.body.enrollmentUrl, unenrollmentUrl: req.body.unenrollmentUrl, enrollmentToken: req.body.enrollmentToken, isDefault: req.body.isDefault });
+        res.json(mdmServer);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.delete("/mdmserver/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var mdmServer = await deleteMDMServer({ id: req.params.id });
+        res.json(mdmServer);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.get("/mdmservers", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var mdmServers = await listMDMServers({ tenantId: req.auth.tenantId });
+        res.json(mdmServers);
+    } catch (e) {
         res.status(400).json({ error: e.message });
     }
 });

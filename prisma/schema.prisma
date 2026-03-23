@@ -40,6 +40,7 @@ model User {
   disabled       Boolean         @default(false)
   domainId       String?
   domain         domain?         @relation(fields: [domainId], references: [id], name: "domainUsers")
+  devices        Device[]
 }
 
 enum TenantType {
@@ -65,22 +66,25 @@ model tenant {
   externalAppAccess  ExternalAppAccess[]
   type               TenantType          @default(Organization)
   allowGroupCreation Boolean             @default(false)
+  mdmServers         MdmServer[]
+  devices            Device[]
 }
 
 model group {
-  id           String      @id @default(cuid())
+  id           String        @id @default(cuid())
   name         String
   description  String?
-  groupname    String      @unique
+  groupname    String        @unique
   users        groupUser[]
-  type         GroupType   @default(Organizational)
+  type         GroupType     @default(Organizational)
   tenantId     String
-  tenant       tenant      @relation(fields: [tenantId], references: [id])
+  tenant       tenant        @relation(fields: [tenantId], references: [id])
   domainId     String?
-  domain       domain?     @relation(fields: [domainId], references: [id], name: "domainGroups")
+  domain       domain?       @relation(fields: [domainId], references: [id], name: "domainGroups")
   email        String?
   createdBy    String?
-  adminCreated Boolean     @default(false)
+  adminCreated Boolean       @default(false)
+  devices      DeviceGroup[]
 }
 
 enum GroupType {
@@ -103,7 +107,7 @@ model session {
   userId      String
   createdAt   DateTime         @default(now())
   user        User             @relation(fields: [userId], references: [id])
-  expiresAt   DateTime         @default(dbgenerated("now() + interval '24 hours'"))
+  expiresAt   DateTime         @default(dbgenerated("now() + interval '48 hours'"))
   appSessions userAppSession[]
 }
 
@@ -173,4 +177,65 @@ model domain {
   hasMXRecord Boolean  @default(false)
   domainUsers User[]   @relation(name: "domainUsers")
   groups      group[]  @relation(name: "domainGroups")
+}
+
+model DeviceGroup {
+  id       String @id @default(cuid())
+  deviceId String
+  groupId  String
+  device   Device @relation(fields: [deviceId], references: [id])
+  group    group  @relation(fields: [groupId], references: [id])
+
+  @@unique([deviceId, groupId])
+}
+
+enum DeviceHardwareType {
+  LAPTOP
+  PHONE
+  TABLET
+  SERVER
+  OTHER
+}
+
+enum DeviceSoftwareType {
+  THETAOS
+  ANDROID
+  OTHER
+}
+
+model Device {
+  id           String             @id @default(cuid())
+  name         String
+  displayName  String
+  os           String
+  osVersion    String
+  hardwareType DeviceHardwareType @default(OTHER)
+  softwareType DeviceSoftwareType @default(OTHER)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  assignedTo   String?
+  groups       DeviceGroup[]
+  user         User?              @relation(fields: [assignedTo], references: [id])
+  mdmServerId  String?
+  mdmServer    MdmServer?         @relation(fields: [mdmServerId], references: [id])
+  extraInfo    Json?
+  lastCheckIn  DateTime?
+  token        String             @unique @default(cuid())
+  tenantId     String
+  tenant       tenant             @relation(fields: [tenantId], references: [id])
+}
+
+model MdmServer {
+  id              String   @id @default(cuid())
+  name            String
+  url             String
+  enrollmentUrl   String
+  unenrollmentUrl String
+  tenantId        String
+  tenant          tenant   @relation(fields: [tenantId], references: [id])
+  devices         Device[]
+  enrollmentToken String
+  isDefault       Boolean  @default(false)
+
+  @@unique([tenantId, isDefault])
 }

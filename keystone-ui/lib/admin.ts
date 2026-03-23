@@ -28,6 +28,62 @@ export function useUsersList() {
     return usersList;
 }
 
+export function useDevicesList() {
+    const reload = () => {
+        setDevicesList({ data: null, loaded: false, reload });
+    };
+    const [devicesList, setDevicesList] = useState({ data: null, loaded: false, reload });
+    useEffect(() => {
+        if (!devicesList.loaded) {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/devices", { credentials: "include", redirect: "manual" }).then((res) => {
+                if (res.ok) {
+                    return res.json();
+                } else {
+                    console.log("unauthorized");
+                    return {
+                        users: null, error: {
+                            text: "Unauthorized",
+                            code: "Unauthorized",
+                            status: 401,
+                        }
+                    }
+                }
+            }).then((data) => {
+                setDevicesList({ data, loaded: true, reload });
+            });
+        }
+    }, [devicesList.loaded]);
+    return devicesList;
+}
+
+export function useMDMServersList() {
+    const reload = () => {
+        setMDMServersList({ data: null, loaded: false, reload });
+    };
+    const [MDMServersList, setMDMServersList] = useState({ data: null, loaded: false, reload });
+    useEffect(() => {
+        if (!MDMServersList.loaded) {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/mdmservers", { credentials: "include", redirect: "manual" }).then((res) => {
+                if (res.ok) {
+                    return res.json();
+                } else {
+                    console.log("unauthorized");
+                    return {
+                        users: null, error: {
+                            text: "Unauthorized",
+                            code: "Unauthorized",
+                            status: 401,
+                        }
+                    }
+                }
+            }).then((data) => {
+                setMDMServersList({ data, loaded: true, reload });
+            });
+        }
+    }, [MDMServersList.loaded]);
+    return MDMServersList;
+}
+
 export function useTenantsList() {
     const reload = () => {
         setUsersList({ data: null, loaded: false, reload });
@@ -294,6 +350,36 @@ export function CreateApp({ name, description, logo, mainUrl }: { name: string, 
     });
 }
 
+export function createMDMServer({ name, url, enrollmentUrl, enrollmentToken, isDefault, unenrollmentUrl }: { name: string, url: string, enrollmentUrl: string, enrollmentToken: string, isDefault: boolean, unenrollmentUrl: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/mdmserver", {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ name, url, enrollmentUrl, enrollmentToken, isDefault, unenrollmentUrl }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to create MDM server",
+                        code: "Failed to create MDM server",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
 export function AddUserToApp({ userId, appId }: { userId: string, appId: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/app/" + appId + "/userappaccess", {
@@ -450,6 +536,36 @@ export function updateApp({ appId, name, description, logo, mainUrl, availableFo
                     error: {
                         text: "Failed to update app",
                         code: "Failed to update app",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function updateDevice({ id, name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName }: { id: string, name: string, hardwareType: string, softwareType: string, os: string, osVersion: string, assignedTo: string, mdmServerId: string, extraInfo: any, displayName: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/device/" + id, {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to update device",
+                        code: "Failed to update device",
                         status: 401,
                     }
                 }
