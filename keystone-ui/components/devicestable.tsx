@@ -74,13 +74,20 @@ export function DevicesTable({ devicesListHook }: { devicesListHook: any }) {
                     return row.original.softwareType == "THETAOS" ? "ThetaOS" : "Other";
                 }
             },
+            // {
+            //     header: "OS",
+            //     accessorKey: "os",
+            // },
+            // {
+            //     header: "OS Version",
+            //     accessorKey: "osVersion",
+            // },
             {
-                header: "OS",
-                accessorKey: "os",
-            },
-            {
-                header: "OS Version",
-                accessorKey: "osVersion",
+                header: "Enrollment Type",
+                accessorKey: "isSelfEnrolled",
+                cell: ({ row }) => {
+                    return row.original.isSelfEnrolled ? "Self" : "Admin";
+                },
             },
             {
                 header: "Assigned To",
@@ -164,6 +171,7 @@ function DeviceInfoDrawer({ open, setOpen, device, devicesListHook, mdmsListHook
                     <InputField label="Software Type" value={device.softwareType} disabled={true} />
                     <InputField label="OS" value={device.os} disabled={true} />
                     <InputField label="OS Version" value={device.osVersion} disabled={true} />
+                    <InputField label="Enrollment Type" value={device.isSelfEnrolled ? "Self" : "Admin"} disabled={true} />
                     <Separator style={{ marginTop: "25px" }} />
                     <div style={{ fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px" }}>Device Settings</div>
                     <div style={{ fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)" }}>Configure settings for this device</div>

@@ -8,7 +8,7 @@ router.get("/home/{*any}", async (req: any, res: any) => {
         res.redirect("/auth/signin");
         return;
     }
-    var session = await getSession({sessionId: req.cookies.sessionId});
+    var session = await getSession({ sessionId: req.cookies.sessionId });
     if (!session) {
         res.redirect("/auth/signin");
         return;
@@ -21,7 +21,7 @@ router.get("/admin/{*any}", async (req: any, res: any) => {
         res.redirect("/auth/signin");
         return;
     }
-    var session = await getSession({sessionId: req.cookies.sessionId});
+    var session = await getSession({ sessionId: req.cookies.sessionId });
     if (!session) {
         res.redirect("/auth/signin");
         return;
@@ -35,4 +35,4 @@ router.get("/", async (req: any, res: any) => {
 
 router.use("/static", express.static(process.cwd() + "/server/web/static"));
 
-export {router}
+export { router }

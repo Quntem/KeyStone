@@ -171,15 +171,13 @@ export function AddMDMDrawer({ open, setOpen, mdmsListHook }: { open: boolean, s
                     <InputField type="text" label="Name" value={name} setValue={setName} />
                     <InputField type="url" label="URL" value={url} setValue={setUrl} />
                     <InputField type="url" label="Enrollment URL" value={enrollmentUrl} setValue={setEnrollmentUrl} />
-                    <InputField type="text" label="Enrollment Token" value={enrollmentToken} setValue={setEnrollmentToken} />
-                    <InputField type="url" label="Unenrollment URL" value={unenrollmentUrl} setValue={setUnenrollmentUrl} />
                     <SwitchInput label="Is Default" value={isDefault} setValue={setIsDefault} />
                 </div>
                 <Separator />
                 <DrawerFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
                     <Button variant="outline" onClick={() => setOpen(false)}><XIcon size={20} />Cancel</Button>
                     <Button onClick={async () => {
-                        await createMDMServer({ name, url, enrollmentUrl, enrollmentToken, isDefault, unenrollmentUrl });
+                        await createMDMServer({ name, url, enrollmentToken, isDefault });
                         setOpen(false);
                         setTimeout(() => {
                             mdmsListHook.reload();

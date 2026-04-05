@@ -350,13 +350,13 @@ export function CreateApp({ name, description, logo, mainUrl }: { name: string, 
     });
 }
 
-export function createMDMServer({ name, url, enrollmentUrl, enrollmentToken, isDefault, unenrollmentUrl }: { name: string, url: string, enrollmentUrl: string, enrollmentToken: string, isDefault: boolean, unenrollmentUrl: string }) {
+export function createMDMServer({ name, url, enrollmentToken, isDefault }: { name: string, url: string, enrollmentToken: string, isDefault: boolean }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/mdmserver", {
             credentials: "include",
             redirect: "manual",
             method: "POST",
-            body: JSON.stringify({ name, url, enrollmentUrl, enrollmentToken, isDefault, unenrollmentUrl }),
+            body: JSON.stringify({ name, url, enrollmentToken, isDefault }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",

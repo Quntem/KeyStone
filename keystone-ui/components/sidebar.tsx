@@ -62,7 +62,7 @@ export const AdminSidebar = ({ ignoreSize }: { ignoreSize?: boolean }) => {
             <SidebarItem title="MDM Servers" onClick={() => { router.push("/admin/mdmservers" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={ServerIcon} active={path === "/admin/mdmservers"} index={8} />
             <Separator style={{ margin: "10px 0px" }} />
             <ExtraItems />
-            <SidebarFooter index={9} />
+            <SidebarFooter index={11} />
         </div>
     );
 };
@@ -75,8 +75,8 @@ function ExtraItems() {
         return null
     }
     return <>
-        <SidebarItem title="Your Account" onClick={() => { router.push("/account") }} Icon={UserIcon} active={false} index={7} />
-        <SidebarItem title="Your Apps" onClick={() => { router.push("/apps") }} Icon={LayoutGrid} active={false} index={8} />
+        <SidebarItem title="Your Account" onClick={() => { router.push("/account") }} Icon={UserIcon} active={false} index={9} />
+        <SidebarItem title="Your Apps" onClick={() => { router.push("/apps") }} Icon={LayoutGrid} active={false} index={10} />
         <Separator style={{ margin: "10px 0px" }} />
     </>
 }

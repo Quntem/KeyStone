@@ -191,7 +191,12 @@ export async function getUserById({ id }: { id: string }) {
                 include: {
                     group: true,
                 },
-            }
+            },
+            devices: {
+                include: {
+                    mdmServer: true,
+                },
+            },
         },
         omit: {
             password: true,
@@ -233,6 +238,12 @@ export async function listUsers({ tenantId, path }: { tenantId: string, path?: s
         include: {
             manager: true,
             tenant: true,
+            groups: {
+                include: {
+                    group: true,
+                },
+            },
+            devices: true,
         },
         omit: {
             password: true,
@@ -911,7 +922,7 @@ export function UpgradeToFullTenant({ tenantId }: { tenantId: string }) {
     });
 }
 
-export async function createDevice({ name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName, tenantId }: { name: string, hardwareType: DeviceHardwareType, softwareType: DeviceSoftwareType, os: string, osVersion: string, assignedTo: string, mdmServerId: string | null, extraInfo: any, displayName: string, tenantId: string }) {
+export async function createDevice({ name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName, tenantId, isSelfEnrolled, enrolledById, groups }: { name: string, hardwareType: DeviceHardwareType, softwareType: DeviceSoftwareType, os: string, osVersion: string, assignedTo: string, mdmServerId: string | null, extraInfo: any, displayName: string, tenantId: string, isSelfEnrolled: boolean, enrolledById: string, groups: string[] }) {
     if (!mdmServerId) {
         const defaultMDMServer = await prisma.mdmServer.findUnique({
             where: {
@@ -929,16 +940,46 @@ export async function createDevice({ name, hardwareType, softwareType, os, osVer
     }
     const device = await prisma.device.create({
         data: {
-            name,
+            name: name.toLowerCase(),
             displayName: displayName || name,
             tenantId,
             hardwareType,
             softwareType,
             os,
             osVersion,
-            assignedTo,
+            assignedTo: assignedTo || isSelfEnrolled ? enrolledById : null,
             mdmServerId,
             extraInfo,
+            isSelfEnrolled,
+            enrolledById,
+            lastCheckIn: new Date(),
+            groups: {
+                create: groups.map((group: any) => ({
+                    group: {
+                        connect: {
+                            id: group,
+                        },
+                    },
+                })),
+            },
+        },
+        include: {
+            tenant: true,
+            groups: {
+                include: {
+                    group: true,
+                },
+            },
+            mdmServer: true,
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                },
+            },
         },
     });
     if (mdmServerId) {
@@ -958,19 +999,58 @@ export async function createDevice({ name, hardwareType, softwareType, os, osVer
             });
             return device;
         }
-        await fetch(mdmServer.enrollmentUrl, {
+        const response = await fetch(mdmServer.url + "/api/v1/keystone/webhook/device", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                "Accept": "application/json",
                 "Authorization": `Bearer ${mdmServer.enrollmentToken}`,
             },
-            body: JSON.stringify(device),
+            body: JSON.stringify({
+                "event": "enroll",
+                "tenantId": tenantId,
+                "device": device,
+            }),
         });
+        const responseData = await response.json();
+        if (!response.ok) {
+            console.log("Failed to enroll device in MDM");
+            await deleteDevice({ id: device.id });
+            return null;
+        } else {
+            const updatedDevice = await prisma.device.update({
+                where: {
+                    id: device.id,
+                },
+                data: {
+                    token: responseData.token.token,
+                },
+                include: {
+                    tenant: true,
+                    groups: {
+                        include: {
+                            group: true,
+                        },
+                    },
+                    mdmServer: true,
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            name: true,
+                            email: true,
+                            role: true,
+                        },
+                    },
+                },
+            });
+            return updatedDevice;
+        }
     }
     return device;
 }
 
-export async function updateDevice({ id, name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName }: { id: string, name: string, hardwareType: DeviceHardwareType, softwareType: DeviceSoftwareType, os: string, osVersion: string, assignedTo: string, mdmServerId: string, extraInfo: any, displayName: string }) {
+export async function updateDevice({ id, name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName, lastCheckIn }: { id: string, name?: string, hardwareType?: DeviceHardwareType, softwareType?: DeviceSoftwareType, os?: string, osVersion?: string, assignedTo?: string, mdmServerId?: string, extraInfo?: any, displayName?: string, lastCheckIn?: Date }) {
     return await prisma.device.update({
         where: {
             id,
@@ -985,6 +1065,25 @@ export async function updateDevice({ id, name, hardwareType, softwareType, os, o
             assignedTo,
             mdmServerId,
             extraInfo,
+            lastCheckIn
+        },
+        include: {
+            tenant: true,
+            groups: {
+                include: {
+                    group: true,
+                },
+            },
+            mdmServer: true,
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                },
+            },
         },
     });
 }
@@ -1055,24 +1154,25 @@ export async function addDeviceToGroup({ deviceId, groupId }: { deviceId: string
             deviceId,
             groupId,
         },
+        include: {
+            group: true,
+        },
     });
 }
 
-export async function createMDMServer({ name, tenantId, url, enrollmentUrl, unenrollmentUrl, enrollmentToken, isDefault }: { name: string, tenantId: string, url: string, enrollmentUrl: string, unenrollmentUrl: string, enrollmentToken: string, isDefault: boolean }) {
+export async function createMDMServer({ name, tenantId, url, enrollmentToken, isDefault }: { name: string, tenantId: string, url: string, enrollmentToken: string, isDefault: boolean }) {
     return await prisma.mdmServer.create({
         data: {
             name,
             tenantId,
             url,
-            enrollmentUrl,
-            unenrollmentUrl,
             enrollmentToken,
             isDefault,
         },
     });
 }
 
-export async function updateMDMServer({ id, name, tenantId, url, enrollmentUrl, unenrollmentUrl, enrollmentToken, isDefault }: { id: string, name: string, tenantId: string, url: string, enrollmentUrl: string, unenrollmentUrl: string, enrollmentToken: string, isDefault: boolean }) {
+export async function updateMDMServer({ id, name, tenantId, url, enrollmentToken, isDefault }: { id: string, name: string, tenantId: string, url: string, enrollmentToken: string, isDefault: boolean }) {
     return await prisma.mdmServer.update({
         where: {
             id,
@@ -1081,8 +1181,6 @@ export async function updateMDMServer({ id, name, tenantId, url, enrollmentUrl, 
             name,
             tenantId,
             url,
-            enrollmentUrl,
-            unenrollmentUrl,
             enrollmentToken,
             isDefault,
         },
