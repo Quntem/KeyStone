@@ -119,7 +119,7 @@ export function listChildTenants({ tenantId }: { tenantId: string }) {
     });
 }
 
-export async function createSession({ userId, password }: { userId: string, password: string }) {
+export async function createSession({ userId, password, infiniteSession }: { userId: string, password: string, infiniteSession: boolean }) {
     var user = await prisma.user.findUnique({
         where: {
             id: userId,
@@ -135,15 +135,24 @@ export async function createSession({ userId, password }: { userId: string, pass
         return await prisma.session.create({
             data: {
                 userId,
-                expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+                expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 100)),
             },
         });
     } else {
-        return await prisma.session.create({
-            data: {
-                userId,
-            },
-        });
+        if (infiniteSession) {
+            return await prisma.session.create({
+                data: {
+                    userId,
+                    expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 100)),
+                },
+            });
+        } else {
+            return await prisma.session.create({
+                data: {
+                    userId,
+                }
+            });
+        }
     }
 }
 
@@ -935,7 +944,7 @@ export function UpgradeToFullTenant({ tenantId }: { tenantId: string }) {
     });
 }
 
-export async function createDevice({ name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName, tenantId, isSelfEnrolled, enrolledById, groups }: { name: string, hardwareType: DeviceHardwareType, softwareType: DeviceSoftwareType, os: string, osVersion: string, assignedTo: string, mdmServerId: string | null, extraInfo: any, displayName: string, tenantId: string, isSelfEnrolled: boolean, enrolledById: string, groups: string[] }) {
+export async function createDevice({ name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName, tenantId, isSelfEnrolled, enrolledById, groups }: { name: string, hardwareType: DeviceHardwareType, softwareType: DeviceSoftwareType, os: string, osVersion: string, assignedTo: string, mdmServerId: string | null, extraInfo: any, displayName: string, tenantId: string, isSelfEnrolled: boolean, enrolledById: string, groups?: string[] }) {
     if (!mdmServerId) {
         const defaultMDMServer = await prisma.mdmServer.findUnique({
             where: {
@@ -1372,6 +1381,14 @@ export async function getDeviceByDeviceName({ tenantId, deviceName }: { tenantId
                     role: true,
                 },
             },
+        },
+    });
+}
+
+export async function getMdmServerById({ id }: { id: string }) {
+    return await prisma.mdmServer.findUnique({
+        where: {
+            id,
         },
     });
 }

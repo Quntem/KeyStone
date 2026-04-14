@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 var router = express.Router();
 
-import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, setTenantGroupCreationPermition, listDevices, createDevice, updateDevice, deleteDevice, addDeviceToGroup, updateMDMServer, deleteMDMServer, listMDMServers, createMDMServer, getDeviceById, getDeviceByDeviceName, removeDeviceFromGroup } from "../functions.ts";
+import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, setTenantGroupCreationPermition, listDevices, createDevice, updateDevice, deleteDevice, addDeviceToGroup, updateMDMServer, deleteMDMServer, listMDMServers, createMDMServer, getDeviceById, getDeviceByDeviceName, removeDeviceFromGroup, getMdmServerById } from "../functions.ts";
 import { requireAuth, requireRole } from "../webfunctions.ts";
 
 router.use(express.json());
@@ -513,6 +513,44 @@ router.get("/mdmservers", requireAuth({ redirectTo: "/auth/signin" }), requireRo
         var mdmServers = await listMDMServers({ tenantId: req.auth.tenantId });
         res.json(mdmServers);
     } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.delete("/mdmactions/group/:id/device", async (req: any, res: any) => {
+    const mdmserver = await getMdmServerById({ id: req.headers.mdmserverid });
+    if (!mdmserver) {
+        res.status(404).json({ error: "MDM Server not found" });
+        return;
+    }
+    if (mdmserver.enrollmentToken !== req.headers.authorization) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+    }
+    try {
+        var groupDevice = await removeDeviceFromGroup({ deviceId: req.body.deviceId, groupId: req.params.id });
+        res.json(groupDevice);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.post("/mdmactions/group/:id/device", async (req: any, res: any) => {
+    const mdmserver = await getMdmServerById({ id: req.headers.mdmserverid });
+    if (!mdmserver) {
+        res.status(404).json({ error: "MDM Server not found" });
+        return;
+    }
+    if (mdmserver.enrollmentToken !== req.headers.authorization) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+    }
+    try {
+        var groupDevice = await addDeviceToGroup({ deviceId: req.body.deviceId, groupId: req.params.id });
+        res.json(groupDevice);
+    } catch (e) {
+        //console.log(e);
         res.status(400).json({ error: e.message });
     }
 });

@@ -55,7 +55,7 @@ router.post("/signin", bodyParser.urlencoded({ extended: true }), async (req: an
         return;
     }
     try {
-        var session = await createSession({ userId: userId.id, password: req.body.password });
+        var session = await createSession({ userId: userId.id, password: req.body.password, infiniteSession: req.body.infinitesession });
     } catch (error) {
         res.redirect("/auth/signin" + (req.body.redirectTo ? "?redirectTo=" + req.body.redirectTo : "") + "&error=Invalid username or password");
         return;
