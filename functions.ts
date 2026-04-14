@@ -292,8 +292,9 @@ export function revokeUserAppAccess({ id }: { id: string }) {
     });
 }
 
-export function grantUserAppAccess({ userId, appId }: { userId: string, appId: string }) {
-    return prisma.userAppAccess.create({
+export async function grantUserAppAccess({ userId, appId }: { userId: string, appId: string }) {
+    const sessions = await listSessions({ userId });
+    const userAppAccess = await prisma.userAppAccess.create({
         data: {
             userId,
             appId,
@@ -311,6 +312,13 @@ export function grantUserAppAccess({ userId, appId }: { userId: string, appId: s
             },
         },
     });
+    for (const session of sessions) {
+        await createAppSession({
+            userAppAccessId: userAppAccess.id,
+            sessionId: session.id,
+        });
+    }
+    return userAppAccess;
 }
 
 export function listUserAppAccess({ userId }: { userId: string }) {
