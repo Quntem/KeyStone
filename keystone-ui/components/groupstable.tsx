@@ -1,5 +1,5 @@
 "use client"
-import { AddUserToApp, addUserToGroup, CreateApp, CreateGroup, getUserByUsername, removeUserFromApp, removeUserFromGroup, updateApp, updateGroup, useAdminAppsList, useTenantsList, useUsersList } from "@/lib/admin";
+import { addDeviceToGroup, AddUserToApp, addUserToGroup, CreateApp, CreateGroup, getDeviceByDeviceName, getUserByUsername, removeDeviceFromGroup, removeUserFromApp, removeUserFromGroup, updateApp, updateGroup, useAdminAppsList, useTenantsList, useUsersList } from "@/lib/admin";
 import { useReactTable, getCoreRowModel, ColumnDef, flexRender, Row } from "@tanstack/react-table";
 import {
     Table,
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/drawer"
 import { Separator } from "@/components/ui/separator";
 import { Button } from "./ui/button";
-import { CheckIcon, PlusIcon, SaveIcon, SearchIcon, XIcon } from "lucide-react";
+import { CheckIcon, MonitorSmartphoneIcon, PlusIcon, SaveIcon, SearchIcon, XIcon } from "lucide-react";
 import { InputField, PrefixedInput } from "./userstable";
 import { useSession } from "@/lib/auth";
 import { UserItem } from "./header";
@@ -35,7 +35,7 @@ export function GroupsTable({groupsListHook}: {groupsListHook: any}) {
         if (groupsListHook.loaded) {
             setGroups(groupsListHook.data?.map((group: any) => ({
                 ...group,
-                usersCount: group.users?.length || 0,
+                resourcesCount: (group.users?.length || 0) + (group.devices?.length || 0),
             })) || [])
         }
     }, [groupsListHook]);
@@ -55,8 +55,8 @@ export function GroupsTable({groupsListHook}: {groupsListHook: any}) {
                 accessorKey: "description",
             },
             {
-                header: "Users",
-                accessorKey: "usersCount",
+                header: "Resources",
+                accessorKey: "resourcesCount",
             },
         ],
         getCoreRowModel: getCoreRowModel(),
@@ -106,11 +106,13 @@ const TableRowWithDrawer = ({row, groupsListHook}: {row: Row<any>, groupsListHoo
 
 function GroupInfoDrawer({open, setOpen, group, groupsListHook}: {open: boolean, setOpen: (open: boolean) => void, group: any, groupsListHook: any}) {
     const [users, setUsers] = useState<any>(group.users);
+    const [devices, setDevices] = useState<any>(group.devices);
     const [name, setName] = useState(group.name);
     const [description, setDescription] = useState(group.description);
     const [groupname, setGroupname] = useState(group.groupname);
     useEffect(() => {
         setUsers(group.users);
+        setDevices(group.devices);
     }, [open]);
     useEffect(() => {
         const trimmedName = groupname.trim().toLowerCase();
@@ -120,7 +122,7 @@ function GroupInfoDrawer({open, setOpen, group, groupsListHook}: {open: boolean,
     const session = useSession();
     return (
         <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen} onClose={() => {
-            if (users.length > group.users.length || users.length < group.users.length) {
+            if (users.length > group.users.length || users.length < group.users.length || devices.length > group.devices.length || devices.length < group.devices.length) {
                 setTimeout(() => {
                     groupsListHook.reload();
                 }, 1000);
@@ -153,16 +155,25 @@ function GroupInfoDrawer({open, setOpen, group, groupsListHook}: {open: boolean,
                         }}><SaveIcon size={20} />Save</Button>
                     </div>
                     <Separator style={{marginTop: "25px"}} />
-                    <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>Group Members</div>
+                    <div style={{fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px"}}>Group Resources</div>
                     <UserSearchInput onUserSelect={(user) => {
-                        addUserToGroup({groupId: group.id, userId: user.id}).then((useritem) => {
-                            setUsers([...users, useritem]);
-                        });
+                        if (user.type === "user") {
+                            addUserToGroup({groupId: group.id, userId: user.user.id}).then((useritem) => {
+                                setUsers([...users, useritem]);
+                            });
+                        } else if (user.type === "device") {
+                            addDeviceToGroup({groupId: group.id, deviceId: user.device.id}).then((deviceitem) => {
+                                setDevices([...devices, deviceitem]);
+                            });
+                        }
                     }} />
                     <div style={{margin: "20px 20px 0px 20px"}}>
-                        <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>Users with access</div>
+                        <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>Resources with access</div>
                         <div className="p-3 flex flex-col gap-3 shadow-sm rounded-md bg-card">{users?.map((userAppAccessItem: any) => (
                             <UserGroupAccessRow key={userAppAccessItem.id} user={userAppAccessItem} users={users} setUsers={setUsers} />
+                        ))}
+                        {devices?.map((deviceAppAccessItem: any) => (
+                            <DeviceGroupAccessRow key={deviceAppAccessItem.id} device={deviceAppAccessItem} devices={devices} setDevices={setDevices} />
                         ))}</div>
                     </div>
                 </div>
@@ -183,6 +194,29 @@ function UserGroupAccessRow({user, users, setUsers}: {user: any, users: any, set
                 <ConfirmDialog title="Remove User" description="Are you sure you want to remove this user from the group?" isOpen={confirmOpen} onConfirm={() => {
                     removeUserFromGroup({groupId: user.groupId, userId: user.user.id}).then(() => {
                         setUsers(users.filter((userAppAccessItem: any) => userAppAccessItem.id !== user.id));
+                    });
+                }} onClose={() => {
+                    setConfirmOpen(false);
+                }} />
+                <Button variant="outline" onClick={() => {
+                    setConfirmOpen(true);
+                }}><XIcon size={20} /></Button>
+            </>
+        } />
+    );
+}
+
+function DeviceGroupAccessRow({device, devices, setDevices}: {device: any, devices: any, setDevices: (devices: any) => void}) {
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    return (
+        <UserItem user={{
+            email: device.device.name,
+            name: device.device.displayName,
+        }} Icon={MonitorSmartphoneIcon} Extra={
+            <>
+                <ConfirmDialog title="Remove Device" description="Are you sure you want to remove this device from the group?" isOpen={confirmOpen} onConfirm={() => {
+                    removeDeviceFromGroup({groupId: device.groupId, deviceId: device.device.id}).then(() => {
+                        setDevices(devices.filter((deviceAppAccessItem: any) => deviceAppAccessItem.id !== device.id));
                     });
                 }} onClose={() => {
                     setConfirmOpen(false);
@@ -240,9 +274,10 @@ export function UserSearchInput({onUserSelect}: {onUserSelect: (user: any) => an
     const session = useSession();
     const [value, setValue] = useState("");
     const [user, setUser] = useState<any>(null);
+    const [device, setDevice] = useState<any>(null);
     return (
         <div style={{padding: "20px 20px 0px 20px"}}>
-            <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>Find User</div>
+            <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>Find Resource</div>
             <div style={{display: "flex", flexDirection: "row", alignItems: "center", gap: "10px"}}>
                 <div className="flex items-center border border-input rounded-md shadow-xs bg-background focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px] transition-[color,box-shadow] px-3 h-9 text-base w-full">
                     <span style={{color: "var(--qu-text-secondary)"}} className="select-none text-[14px]">{session?.data?.user?.tenant.name + "/"}</span>
@@ -254,6 +289,14 @@ export function UserSearchInput({onUserSelect}: {onUserSelect: (user: any) => an
                                     setUser(null);
                                 } else {
                                     setUser(data);
+                                }
+                            });
+                            getDeviceByDeviceName(value).then((data) => {
+                                if (data?.error) {
+                                    console.log(data.error);
+                                    setDevice(null);
+                                } else {
+                                    setDevice(data);
                                 }
                             });
                         }
@@ -268,11 +311,31 @@ export function UserSearchInput({onUserSelect}: {onUserSelect: (user: any) => an
                             setUser(data);
                         }
                     });
+                    getDeviceByDeviceName(value).then((data) => {
+                        if (data?.error) {
+                            console.log(data.error);
+                            setDevice(null);
+                        } else {
+                            setDevice(data);
+                        }
+                    });
                 }}><SearchIcon size={20} />Search</Button>
             </div>
             {user?.id && <div className="border border-input rounded-md shadow-xs bg-background p-2 mt-[10px] hover:bg-input/50 cursor-pointer transition-all">
                 <UserItem user={user} onClick={() => {
-                    onUserSelect(user);
+                    onUserSelect({type: "user", user});
+                    setDevice(null);
+                    setUser(null);
+                    setValue("");
+                }} />
+            </div>}
+            {device?.id && <div className="border border-input rounded-md shadow-xs bg-background p-2 mt-[10px] hover:bg-input/50 cursor-pointer transition-all">
+                <UserItem user={{
+                    email: device.name,
+                    name: device.displayName,
+                }} Icon={MonitorSmartphoneIcon} onClick={() => {
+                    onUserSelect({type: "device", device});
+                    setDevice(null);
                     setUser(null);
                     setValue("");
                 }} />

@@ -180,8 +180,8 @@ function GroupSelectorDrawer({ groups, setGroups, children }: { groups: { id: st
                 </DrawerHeader>
                 <ItemGroup className="border-1 rounded-md mx-4">
                     {allgroups.data?.map((group) => (
-                        <>
-                            <Item key={group.id} onClick={() => {
+                        <div key={group.id}>
+                            <Item onClick={() => {
                                 if (groups.some((g) => g.id === group.id)) {
                                     setGroups(groups.filter((g) => g.id !== group.id))
                                 } else {
@@ -197,7 +197,7 @@ function GroupSelectorDrawer({ groups, setGroups, children }: { groups: { id: st
                                 </ItemActions>
                             </Item>
                             {allgroups.data?.[allgroups.data.length - 1]?.id !== group.id && <Separator />}
-                        </>
+                        </div>
                     ))}
                 </ItemGroup>
                 <DrawerFooter>
@@ -331,7 +331,7 @@ function MDMServerSelectorDrawer({ mdmServer, setMdmServer, children }: { mdmSer
                 </ItemGroup>
                 <ItemGroup className="border-1 mt-4 rounded-md mx-4">
                     {allmdmServers.data?.map((server) => (
-                        <>
+                        <div key={server.id}>
                             <Item key={server.id} onClick={() => {
                                 if (server.id === mdmServer?.id) {
                                     setMdmServer(null)
@@ -348,7 +348,7 @@ function MDMServerSelectorDrawer({ mdmServer, setMdmServer, children }: { mdmSer
                                 </ItemActions>
                             </Item>
                             {allmdmServers.data?.[allmdmServers.data.length - 1]?.id !== server.id && <Separator />}
-                        </>
+                        </div>
                     ))}
                 </ItemGroup>
                 <DrawerFooter>

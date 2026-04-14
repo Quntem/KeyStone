@@ -431,6 +431,27 @@ export function getUserByUsername(username: string) {
     });
 }
 
+export function getDeviceByDeviceName(deviceName: string) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/device/devicename/" + deviceName, { credentials: "include", redirect: "manual" }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Unauthorized",
+                        code: "Unauthorized",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
 export function removeUserFromApp({ accessId, appId }: { accessId: string, appId: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/app/" + appId + "/userappaccess/" + accessId, {
@@ -806,3 +827,62 @@ export function addUserToGroup({ groupId, userId }: { groupId: string, userId: s
     });
 }
 
+export function removeDeviceFromGroup({ groupId, deviceId }: { groupId: string, deviceId: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId + "/device/", {
+            credentials: "include",
+            redirect: "manual",
+            method: "DELETE",
+            body: JSON.stringify({ deviceId }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to remove user from group",
+                        code: "Failed to remove user from group",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function addDeviceToGroup({ groupId, deviceId }: { groupId: string, deviceId: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId + "/device/", {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ deviceId }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to add user to group",
+                        code: "Failed to add user to group",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
