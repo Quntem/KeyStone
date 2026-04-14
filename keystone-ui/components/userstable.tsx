@@ -8,7 +8,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-  } from "@/components/ui/table"
+} from "@/components/ui/table"
 import { HTMLInputTypeAttribute, useEffect, useState } from "react";
 import {
     Drawer,
@@ -32,7 +32,7 @@ import { useWindowSize } from "@/lib/screensize";
 import { Switch } from "@/components/ui/switch";
 import { usePathname } from "next/navigation";
 
-export function UsersTable({usersListHook}: {usersListHook: any}) {
+export function UsersTable({ usersListHook }: { usersListHook: any }) {
     const [users, setUsers] = useState([]);
     const pathname = usePathname();
     useEffect(() => {
@@ -49,7 +49,7 @@ export function UsersTable({usersListHook}: {usersListHook: any}) {
     }, [usersListHook]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
         []
-      )
+    )
     const table = useReactTable({
         data: users,
         columns: pathname.startsWith("/admin") ? [
@@ -138,7 +138,7 @@ export function UsersTable({usersListHook}: {usersListHook: any}) {
     );
 }
 
-const TableRowWithDrawer = ({row, usersListHook}: {row: Row<any>, usersListHook: any}) => {
+const TableRowWithDrawer = ({ row, usersListHook }: { row: Row<any>, usersListHook: any }) => {
     const [open, setOpen] = useState(false);
     return (
         <>
@@ -154,14 +154,14 @@ const TableRowWithDrawer = ({row, usersListHook}: {row: Row<any>, usersListHook:
     );
 }
 
-export function UserInfoDrawer({open, setOpen, user, usersListHook}: {open: boolean, setOpen: (open: boolean) => void, user: any, usersListHook: any}) {
+export function UserInfoDrawer({ open, setOpen, user, usersListHook }: { open: boolean, setOpen: (open: boolean) => void, user: any, usersListHook: any }) {
     const pathname = usePathname();
     const [name, setName] = useState(user.name);
     const [username, setUsername] = useState(user.username);
     const [email, setEmail] = useState(user.email);
     const [role, setRole] = useState(user.role);
     const [openConfirm, setOpenConfirm] = useState(false);
-    const [domainId, setDomainId] = useState(user.domainId);    
+    const [domainId, setDomainId] = useState(user.domainId);
     return (
         <>
             <Drawer handleOnly direction="right" open={open} onClose={() => {
@@ -172,12 +172,12 @@ export function UserInfoDrawer({open, setOpen, user, usersListHook}: {open: bool
                 }
             }}>
                 <DrawerContent>
-                    <DrawerHeader style={{gap: "0px"}}>
-                        <DrawerTitle style={{color: "var(--qu-text)", fontWeight: "500"}}>{user.name}</DrawerTitle>
-                        <DrawerDescription style={{color: "var(--qu-text-secondary)"}}>{user.usernameFull}</DrawerDescription>
+                    <DrawerHeader style={{ gap: "0px" }}>
+                        <DrawerTitle style={{ color: "var(--qu-text)", fontWeight: "500" }}>{user.name}</DrawerTitle>
+                        <DrawerDescription style={{ color: "var(--qu-text-secondary)" }}>{user.usernameFull}</DrawerDescription>
                     </DrawerHeader>
                     <Separator />
-                    <div style={{height: "100%", overflowY: "auto", color: "var(--qu-text)", backgroundColor: "var(--qu-background)"}}>
+                    <div style={{ height: "100%", overflowY: "auto", color: "var(--qu-text)", backgroundColor: "var(--qu-background)" }}>
                         <UserQuickActions user={user} usersListHook={usersListHook} setOpen={setOpen} />
                         <InputField label="Name" value={name} setValue={setName} />
                         <PrefixedInput label="Username" value={username} setValue={setUsername} prefix={user.tenant?.name + "/"} />
@@ -185,20 +185,20 @@ export function UserInfoDrawer({open, setOpen, user, usersListHook}: {open: bool
                         {/* <InputField label="Email" value={email} setValue={setEmail} /> */}
                         {pathname.startsWith("/admin") ? <EmailOwnedDomainInput label="Email" value={email} setValue={setEmail} domainId={domainId} setDomainId={setDomainId} /> : null}
                         {pathname.startsWith("/admin") ? <SelectInput label="Role" value={role} setValue={setRole} options={[
-                            {id: "ADMIN", name: "Admin", description: "Has full access to everything in the tenant"},
-                            {id: "USER", name: "User", description: "Has limited access to the tenant"},
-                            {id: "SERVICE", name: "Service", description: "An application or service that can perform actions automatically"}
-                        ]}/> : null}
+                            { id: "ADMIN", name: "Admin", description: "Has full access to everything in the tenant" },
+                            { id: "USER", name: "User", description: "Has limited access to the tenant" },
+                            { id: "SERVICE", name: "Service", description: "An application or service that can perform actions automatically" }
+                        ]} /> : null}
                         {/* <InputField label="Manager" value={manager} setValue={setManager} /> */}
                         {/* <InputField label="Tenant" value={tenant} setValue={setTenant} /> */}
                     </div>
                     <Separator />
-                    <DrawerFooter style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end"}}>
+                    <DrawerFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
                         <Button
                             disabled={name === user.name && username === user.username && email === user.email && role === user.role}
                             variant="outline"
                             onClick={() => {
-                                updateUser({userId: user.id, name, username, email, role, domainId}).then(() => {
+                                updateUser({ userId: user.id, name, username, email, role, domainId }).then(() => {
                                     setOpen(false);
                                     setTimeout(() => {
                                         usersListHook.reload();
@@ -235,29 +235,29 @@ export function UserInfoDrawer({open, setOpen, user, usersListHook}: {open: bool
     );
 }
 
-export function InputField({label, value, setValue, type, style, autoComplete, extraInfo}: {label: string, value: string, setValue: (value: string) => void, type?: HTMLInputTypeAttribute, style?: React.CSSProperties, autoComplete?: HTMLInputTypeAttribute, extraInfo?: React.ReactNode}) {
+export function InputField({ label, value, setValue, type, style, autoComplete, extraInfo, disabled }: { label: string, value: string, setValue: (value: string) => void, type?: HTMLInputTypeAttribute, style?: React.CSSProperties, autoComplete?: HTMLInputTypeAttribute, extraInfo?: React.ReactNode, disabled?: boolean }) {
     return (
-        <div style={{padding: "20px 20px 0px 20px", ...style}}>
-            <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>{label}</div>
-            <Input autoCorrect="off" autoCapitalize="off" style={{backgroundColor: "var(--header-background)"}} value={value} onChange={(e) => setValue(e.target.value)} type={type} autoComplete={autoComplete} />
-            {extraInfo && <div style={{color: "var(--qu-text-secondary)", fontSize: "12px", marginTop: "5px"}}>{extraInfo}</div>}
+        <div style={{ padding: "20px 20px 0px 20px", ...style }}>
+            <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>{label}</div>
+            <Input autoCorrect="off" autoCapitalize="off" style={{ backgroundColor: "var(--header-background)" }} value={value} onChange={(e) => setValue(e.target.value)} type={type} autoComplete={autoComplete} disabled={disabled} />
+            {extraInfo && <div style={{ color: "var(--qu-text-secondary)", fontSize: "12px", marginTop: "5px" }}>{extraInfo}</div>}
         </div>
     );
 }
 
-export function EmailOwnedDomainInput({label, value, setValue, type, style, autoComplete, domainId, setDomainId}: {label: string, value: string, setValue: (value: string) => void, type?: HTMLInputTypeAttribute, style?: React.CSSProperties, autoComplete?: HTMLInputTypeAttribute, domainId?: string, setDomainId?: (domainId: string) => void}) {
+export function EmailOwnedDomainInput({ label, value, setValue, type, style, autoComplete, domainId, setDomainId }: { label: string, value: string, setValue: (value: string) => void, type?: HTMLInputTypeAttribute, style?: React.CSSProperties, autoComplete?: HTMLInputTypeAttribute, domainId?: string, setDomainId?: (domainId: string) => void }) {
     const domains = useDomainsList();
     const [emailLocal, setEmailLocal] = useState(value.split("@")[0]);
     useEffect(() => {
         setValue(emailLocal + "@" + domains.data?.find((domain: any) => domain.id === domainId)?.name);
     }, [emailLocal, domainId, domains]);
     return (
-        <div style={{padding: "20px 20px 0px 20px", ...style}}>
-            <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>{label}</div>
+        <div style={{ padding: "20px 20px 0px 20px", ...style }}>
+            <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>{label}</div>
             <div className="flex flex-row gap-2">
-                <Input autoCorrect="off" autoCapitalize="off" style={{backgroundColor: "var(--header-background)"}} value={emailLocal} onChange={(e) => setEmailLocal(e.target.value)} type={type} autoComplete={autoComplete} />
+                <Input autoCorrect="off" autoCapitalize="off" style={{ backgroundColor: "var(--header-background)" }} value={emailLocal} onChange={(e) => setEmailLocal(e.target.value)} type={type} autoComplete={autoComplete} />
                 <Select value={domainId} onValueChange={setDomainId}>
-                    <SelectTrigger style={{backgroundColor: "var(--header-background)"}}>
+                    <SelectTrigger style={{ backgroundColor: "var(--header-background)" }}>
                         <SelectValue placeholder="Select a domain" />
                     </SelectTrigger>
                     <SelectContent>
@@ -271,21 +271,21 @@ export function EmailOwnedDomainInput({label, value, setValue, type, style, auto
     );
 }
 
-function UserQuickActions({user, usersListHook, setOpen}: {user: any, usersListHook: any, setOpen: (open: boolean) => void}) {
+function UserQuickActions({ user, usersListHook, setOpen }: { user: any, usersListHook: any, setOpen: (open: boolean) => void }) {
     const size = useWindowSize();
     const [confirmDisable, setConfirmDisable] = useState(false);
     const [openPassword, setOpenPassword] = useState(false);
     const [password, setPassword] = useState("");
     return (
-        <div style={{padding: "20px 20px 0px 20px"}}>
-            <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>Quick Actions</div>
+        <div style={{ padding: "20px 20px 0px 20px" }}>
+            <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>Quick Actions</div>
             {!user.disabled && <div className={size.width < 500 ? "flex items-center flex-col gap-2 w-full" : "flex items-center flex-row gap-2 w-full"}>
-                <Button variant="outline" style={{flex: "1", width: size.width < 500 ? "100%" : "auto"}} onClick={() => setOpenPassword(true)}><KeyIcon size={20} /> Password</Button>
-                <Button variant="outline" style={{flex: "1", width: size.width < 500 ? "100%" : "auto"}} onClick={() => setConfirmDisable(true)}><XOctagonIcon size={20} /> Disable</Button>
+                <Button variant="outline" style={{ flex: "1", width: size.width < 500 ? "100%" : "auto" }} onClick={() => setOpenPassword(true)}><KeyIcon size={20} /> Password</Button>
+                <Button variant="outline" style={{ flex: "1", width: size.width < 500 ? "100%" : "auto" }} onClick={() => setConfirmDisable(true)}><XOctagonIcon size={20} /> Disable</Button>
                 {/* <Button variant="outline" style={{flex: "1", width: size.width < 500 ? "100%" : "auto"}}><TrashIcon size={20} /> Delete</Button> */}
             </div>}
             {user.disabled && <div className="flex items-center flex-row gap-2 w-full">
-                <Button variant="outline" style={{flex: "1"}} onClick={() => setConfirmDisable(true)}><CheckIcon size={20} /> Enable</Button>
+                <Button variant="outline" style={{ flex: "1" }} onClick={() => setConfirmDisable(true)}><CheckIcon size={20} /> Enable</Button>
             </div>}
             <ConfirmDialog
                 title="Confirm"
@@ -307,7 +307,7 @@ function UserQuickActions({user, usersListHook, setOpen}: {user: any, usersListH
                 description="Set a new password for this user"
                 isOpen={openPassword}
                 onConfirm={() => {
-                    setUserPassword({userId: user.id, password: password}).then(() => {
+                    setUserPassword({ userId: user.id, password: password }).then(() => {
                         setOpen(false);
                         setOpenPassword(false);
                         setPassword("");
@@ -325,32 +325,32 @@ function UserQuickActions({user, usersListHook, setOpen}: {user: any, usersListH
     );
 }
 
-export function PrefixedInput({label, value, setValue, prefix, style}: {label: string, value: string, setValue: (value: string) => void, prefix: string, style?: React.CSSProperties}) {
+export function PrefixedInput({ label, value, setValue, prefix, style }: { label: string, value: string, setValue: (value: string) => void, prefix: string, style?: React.CSSProperties }) {
     return (
-        <div style={{padding: "20px 20px 0px 20px", ...style}}>
-            <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>{label}</div>
+        <div style={{ padding: "20px 20px 0px 20px", ...style }}>
+            <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>{label}</div>
             <div className="flex items-center border border-input rounded-md shadow-xs bg-background focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px] transition-[color,box-shadow] px-3 h-9 text-base">
-                <span style={{color: "var(--qu-text-secondary)"}} className="select-none text-[14px]">{prefix}</span>
+                <span style={{ color: "var(--qu-text-secondary)" }} className="select-none text-[14px]">{prefix}</span>
                 <input autoCorrect="off" autoCapitalize="off" type="text" value={value} onChange={(e) => setValue(e.target.value)} className="outline-none text-[14px] w-full" />
             </div>
         </div>
     );
 }
 
-export function SelectInput({label, value, setValue, options}: {label: string, value: string, setValue: (value: string) => void, options: {id: string, name: string, description?: string}[]}) {
+export function SelectInput({ label, value, setValue, options }: { label: string, value: string, setValue: (value: string) => void, options: { id: string, name: string, description?: string }[] }) {
     return (
-        <div style={{padding: "20px 20px 0px 20px"}}>
-            <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>{label}</div>
+        <div style={{ padding: "20px 20px 0px 20px" }}>
+            <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>{label}</div>
             <Select value={value} onValueChange={setValue}>
-                <SelectTrigger style={{backgroundColor: "var(--header-background)", width: "100%", height: "fit-content"}}>
+                <SelectTrigger style={{ backgroundColor: "var(--header-background)", width: "100%", height: "fit-content" }}>
                     <SelectValue placeholder="Select an option" />
                 </SelectTrigger>
                 <SelectContent>
                     {options.map((option) => (
                         <SelectItem key={option.id} value={option.id}>
-                            <div style={{display: "flex", flexDirection: "column", alignItems: "start"}}>
-                                <div style={{color: "var(--qu-text)"}}>{option.name}</div>
-                                {option.description && <div style={{color: "var(--qu-text-secondary)"}}>{option.description}</div>}
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "start" }}>
+                                <div style={{ color: "var(--qu-text)" }}>{option.name}</div>
+                                {option.description && <div style={{ color: "var(--qu-text-secondary)" }}>{option.description}</div>}
                             </div>
                         </SelectItem>
                     ))}
@@ -360,28 +360,28 @@ export function SelectInput({label, value, setValue, options}: {label: string, v
     );
 }
 
-export function SwitchInput({label, value, setValue}: {label: string, value: boolean, setValue: (value: boolean) => void}) {
+export function SwitchInput({ label, value, setValue }: { label: string, value: boolean, setValue: (value: boolean) => void }) {
     return (
-        <div style={{padding: "20px 20px 0px 20px"}} className="flex items-center justify-between">
-            <div style={{fontSize: "14px", fontWeight: "500"}}>{label}</div>
+        <div style={{ padding: "20px 20px 0px 20px" }} className="flex items-center justify-between">
+            <div style={{ fontSize: "14px", fontWeight: "500" }}>{label}</div>
             <Switch checked={value} onCheckedChange={setValue} />
         </div>
     );
 }
 
-export function SuffixedInput({label, value, setValue, suffix, fitInput, pattern, style}: {label: string, value: string, setValue: (value: string) => void, suffix: string, fitInput?: boolean, pattern?: string, style?: React.CSSProperties}) {
+export function SuffixedInput({ label, value, setValue, suffix, fitInput, pattern, style }: { label: string, value: string, setValue: (value: string) => void, suffix: string, fitInput?: boolean, pattern?: string, style?: React.CSSProperties }) {
     return (
-        <div style={{padding: "20px 20px 0px 20px", ...style}}>
-            <div style={{fontSize: "14px", fontWeight: "500", marginBottom: "10px"}}>{label}</div>
+        <div style={{ padding: "20px 20px 0px 20px", ...style }}>
+            <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>{label}</div>
             <div className="flex items-center border border-input rounded-md shadow-xs bg-background focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px] transition-[color,box-shadow] px-3 h-9 text-base">
-                <input autoCorrect="off" autoCapitalize="off" pattern={pattern} type="text" value={value} onChange={(e) => setValue(e.target.value)} className={"outline-none text-[14px]" + (fitInput ? "" : " w-full")} style={{fieldSizing: "content"}} />
-                <span style={{color: "var(--qu-text-secondary)"}} className="select-none text-[14px]">{suffix}</span>
+                <input autoCorrect="off" autoCapitalize="off" pattern={pattern} type="text" value={value} onChange={(e) => setValue(e.target.value)} className={"outline-none text-[14px]" + (fitInput ? "" : " w-full")} style={{ fieldSizing: "content" }} />
+                <span style={{ color: "var(--qu-text-secondary)" }} className="select-none text-[14px]">{suffix}</span>
             </div>
         </div>
     );
 }
 
-export function AddUserDrawer({open, setOpen, usersListHook}: {open: boolean, setOpen: (open: boolean) => void, usersListHook: any}) {
+export function AddUserDrawer({ open, setOpen, usersListHook }: { open: boolean, setOpen: (open: boolean) => void, usersListHook: any }) {
     const pathname = usePathname();
     const [name, setName] = useState("");
     const [username, setUsername] = useState("");
@@ -401,7 +401,7 @@ export function AddUserDrawer({open, setOpen, usersListHook}: {open: boolean, se
             </DrawerTrigger>
             <DrawerContent>
                 <DrawerHeader>
-                    <DrawerTitle style={{color: "var(--qu-text)", fontWeight: "500"}}>Add User</DrawerTitle>
+                    <DrawerTitle style={{ color: "var(--qu-text)", fontWeight: "500" }}>Add User</DrawerTitle>
                 </DrawerHeader>
                 <Separator />
                 {status === "idle" && <div className="drawer-mainarea">
@@ -411,34 +411,34 @@ export function AddUserDrawer({open, setOpen, usersListHook}: {open: boolean, se
                     {pathname.startsWith("/admin") ? <EmailOwnedDomainInput label="Email" value={email} setValue={setEmail} domainId={domainId} setDomainId={setDomainId} /> : <InputField label="Email" value={email} setValue={setEmail} />}
                     <InputField label="Password" value={password} setValue={setPassword} type="password" />
                     {pathname.startsWith("/admin") ? <SelectInput label="Role" value={role} setValue={setRole} options={[
-                        {id: "ADMIN", name: "Admin", description: "Has full access to everything in the tenant"},
-                        {id: "USER", name: "User", description: "Has limited access to the tenant"},
-                        {id: "SERVICE", name: "Service", description: "An application or service that can perform actions automatically"}
-                    ]}/> : null}
+                        { id: "ADMIN", name: "Admin", description: "Has full access to everything in the tenant" },
+                        { id: "USER", name: "User", description: "Has limited access to the tenant" },
+                        { id: "SERVICE", name: "Service", description: "An application or service that can perform actions automatically" }
+                    ]} /> : null}
                 </div>}
                 {status === "loading" && <div className="drawer-mainarea">
-                    <div style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", height: "100%", width: "100%"}}>
+                    <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", height: "100%", width: "100%" }}>
                         <Loader2Icon className="animate-spin" size={20} />
                     </div>
                 </div>}
                 {status === "success" && <div className="drawer-mainarea">
-                    <div style={{display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", width: "100%", gap: "15px"}}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", width: "100%", gap: "15px" }}>
                         <CheckIcon size={30} />
-                        <div style={{color: "var(--qu-text)", fontSize: "20px"}}>User added successfully</div>
+                        <div style={{ color: "var(--qu-text)", fontSize: "20px" }}>User added successfully</div>
                         <Button variant="outline" onClick={() => setOpen(false)}><XIcon size={20} />Close</Button>
                     </div>
                 </div>}
                 {status === "error" && <div className="drawer-mainarea">
-                    <div style={{display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", width: "100%", gap: "15px"}}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", width: "100%", gap: "15px" }}>
                         <XIcon size={30} />
-                        <div style={{color: "var(--qu-text)", fontSize: "20px"}}>An error occurred while adding the user</div>
+                        <div style={{ color: "var(--qu-text)", fontSize: "20px" }}>An error occurred while adding the user</div>
                         <Button variant="outline" onClick={() => setOpen(false)}><XIcon size={20} />Close</Button>
                     </div>
                 </div>}
                 {status === "idle" && <Separator />}
-                {status === "idle" && <DrawerFooter style={{display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end"}}>
+                {status === "idle" && <DrawerFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
                     <Button variant="outline" onClick={() => setOpen(false)}><XIcon size={20} />Cancel</Button>
-                    <Button disabled={name === "" || username === "" || email === "" || !isEmail(email) || role === "" } onClick={async () => {
+                    <Button disabled={name === "" || username === "" || email === "" || !isEmail(email) || role === ""} onClick={async () => {
                         setStatus("loading");
                         try {
                             await createUser({

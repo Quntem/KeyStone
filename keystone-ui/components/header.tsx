@@ -115,11 +115,11 @@ export function SidebarDrawer({ open, onOpenChange }: { open: boolean, onOpenCha
     );
 }
 
-export function UserItem({ user, Extra, onClick }: { user: any, Extra?: JSX.Element, onClick?: () => void }) {
+export function UserItem({ user, Extra, onClick, Icon }: { user: any, Extra?: JSX.Element, onClick?: () => void, Icon?: JSX.ElementType }) {
     return (
         <div className="flex items-center gap-2" onClick={onClick}>
             <Avatar className="border border-[var(--qu-border-color)]" style={{ fontSize: "14px", fontWeight: "400" }}>
-                <AvatarFallback style={{ color: "var(--qu-text)" }}>{user.name.charAt(0).toUpperCase() + user.name.charAt(1).toUpperCase()}</AvatarFallback>
+                {Icon ? <AvatarFallback style={{ color: "var(--qu-text)" }}><Icon size={20} /></AvatarFallback> : <AvatarFallback style={{ color: "var(--qu-text)" }}>{user.name.charAt(0).toUpperCase() + user.name.charAt(1).toUpperCase()}</AvatarFallback>}
             </Avatar>
             <div className="grid flex-1 text-left leading-tight">
                 <span className="truncate font-semibold text-sm color-[var(--qu-text)]">{user.name}</span>

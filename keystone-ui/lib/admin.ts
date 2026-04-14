@@ -2,63 +2,123 @@ import { useEffect, useState } from "react";
 
 export function useUsersList() {
     const reload = () => {
-        setUsersList({data: null, loaded: false, reload});
+        setUsersList({ data: null, loaded: false, reload });
     };
-    const [usersList, setUsersList] = useState({data: null, loaded: false, reload});
+    const [usersList, setUsersList] = useState({ data: null, loaded: false, reload });
     useEffect(() => {
         if (!usersList.loaded) {
-            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/users", {credentials: "include", redirect: "manual"}).then((res) => {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/users", { credentials: "include", redirect: "manual" }).then((res) => {
                 if (res.ok) {
                     return res.json();
                 } else {
                     console.log("unauthorized");
-                    return {users: null, error: {
-                        text: "Unauthorized",
-                        code: "Unauthorized",
-                        status: 401,
-                    }}
+                    return {
+                        users: null, error: {
+                            text: "Unauthorized",
+                            code: "Unauthorized",
+                            status: 401,
+                        }
+                    }
                 }
             }).then((data) => {
-                setUsersList({data: {users: data}, loaded: true, reload});
+                setUsersList({ data: { users: data }, loaded: true, reload });
             });
         }
     }, [usersList.loaded]);
     return usersList;
+}
+
+export function useDevicesList() {
+    const reload = () => {
+        setDevicesList({ data: null, loaded: false, reload });
+    };
+    const [devicesList, setDevicesList] = useState({ data: null, loaded: false, reload });
+    useEffect(() => {
+        if (!devicesList.loaded) {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/devices", { credentials: "include", redirect: "manual" }).then((res) => {
+                if (res.ok) {
+                    return res.json();
+                } else {
+                    console.log("unauthorized");
+                    return {
+                        users: null, error: {
+                            text: "Unauthorized",
+                            code: "Unauthorized",
+                            status: 401,
+                        }
+                    }
+                }
+            }).then((data) => {
+                setDevicesList({ data, loaded: true, reload });
+            });
+        }
+    }, [devicesList.loaded]);
+    return devicesList;
+}
+
+export function useMDMServersList() {
+    const reload = () => {
+        setMDMServersList({ data: null, loaded: false, reload });
+    };
+    const [MDMServersList, setMDMServersList] = useState({ data: null, loaded: false, reload });
+    useEffect(() => {
+        if (!MDMServersList.loaded) {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/mdmservers", { credentials: "include", redirect: "manual" }).then((res) => {
+                if (res.ok) {
+                    return res.json();
+                } else {
+                    console.log("unauthorized");
+                    return {
+                        users: null, error: {
+                            text: "Unauthorized",
+                            code: "Unauthorized",
+                            status: 401,
+                        }
+                    }
+                }
+            }).then((data) => {
+                setMDMServersList({ data, loaded: true, reload });
+            });
+        }
+    }, [MDMServersList.loaded]);
+    return MDMServersList;
 }
 
 export function useTenantsList() {
     const reload = () => {
-        setUsersList({data: null, loaded: false, reload});
+        setUsersList({ data: null, loaded: false, reload });
     };
-    const [usersList, setUsersList] = useState({data: null, loaded: false, reload});
+    const [usersList, setUsersList] = useState({ data: null, loaded: false, reload });
     useEffect(() => {
         if (!usersList.loaded) {
-            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/tenants", {credentials: "include", redirect: "manual"}).then((res) => {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/tenants", { credentials: "include", redirect: "manual" }).then((res) => {
                 if (res.ok) {
                     return res.json();
                 } else {
                     console.log("unauthorized");
-                    return {error: {
-                        text: "Unauthorized",
-                        code: "Unauthorized",
-                        status: 401,
-                    }}
+                    return {
+                        error: {
+                            text: "Unauthorized",
+                            code: "Unauthorized",
+                            status: 401,
+                        }
+                    }
                 }
             }).then((data) => {
-                setUsersList({data: data, loaded: true, reload});
+                setUsersList({ data: data, loaded: true, reload });
             });
         }
     }, [usersList.loaded]);
     return usersList;
 }
 
-export function createUser({name, username, email, role, tenantId, password, domainId}: {name: string, username: string, email: string, role: string, tenantId: string, password: string, domainId: string}) {
+export function createUser({ name, username, email, role, tenantId, password, domainId }: { name: string, username: string, email: string, role: string, tenantId: string, password: string, domainId: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/user", {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "POST", 
-            body: JSON.stringify({name, username, email, role, tenantId, password, domainId}),
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ name, username, email, role, tenantId, password, domainId }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -68,11 +128,13 @@ export function createUser({name, username, email, role, tenantId, password, dom
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to create user",
-                    code: "Failed to create user",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to create user",
+                        code: "Failed to create user",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -83,10 +145,10 @@ export function createUser({name, username, email, role, tenantId, password, dom
 export function setUserDisabled(userId: string, disabled: boolean) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/user/" + userId + "/setdisabled", {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "POST", 
-            body: JSON.stringify({disabled}),
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ disabled }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -96,11 +158,13 @@ export function setUserDisabled(userId: string, disabled: boolean) {
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to disable user",
-                    code: "Failed to disable user",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to disable user",
+                        code: "Failed to disable user",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -111,10 +175,10 @@ export function setUserDisabled(userId: string, disabled: boolean) {
 export function setTenantLogo(logo: string) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/tenant/logo", {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "POST", 
-            body: JSON.stringify({logo}),
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ logo }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -124,11 +188,13 @@ export function setTenantLogo(logo: string) {
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to set tenant logo",
-                    code: "Failed to set tenant logo",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to set tenant logo",
+                        code: "Failed to set tenant logo",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -139,10 +205,10 @@ export function setTenantLogo(logo: string) {
 export function setTenantDescription(description: string) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/tenant/description", {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "POST", 
-            body: JSON.stringify({description}),
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ description }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -152,11 +218,43 @@ export function setTenantDescription(description: string) {
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to set tenant description",
-                    code: "Failed to set tenant description",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to set tenant description",
+                        code: "Failed to set tenant description",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function setTenantGroupCreationPermition(allowGroupCreation: boolean) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/tenant/setGroupCreationPermition", {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ allowGroupCreation }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to set tenant group creation permission",
+                        code: "Failed to set tenant group creation permission",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -167,10 +265,10 @@ export function setTenantDescription(description: string) {
 export function setTenantDisplayName(displayName: string) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/tenant/displayname", {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "POST", 
-            body: JSON.stringify({displayName}),
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ displayName }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -180,11 +278,13 @@ export function setTenantDisplayName(displayName: string) {
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to set tenant display name",
-                    code: "Failed to set tenant display name",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to set tenant display name",
+                        code: "Failed to set tenant display name",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -194,37 +294,39 @@ export function setTenantDisplayName(displayName: string) {
 
 export function useAdminAppsList() {
     const reload = () => {
-        setAppsList({data: null, loaded: false, reload});
+        setAppsList({ data: null, loaded: false, reload });
     };
-    const [appsList, setAppsList] = useState({data: null, loaded: false, reload});
+    const [appsList, setAppsList] = useState({ data: null, loaded: false, reload });
     useEffect(() => {
         if (!appsList.loaded) {
-            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/apps", {credentials: "include", redirect: "manual"}).then((res) => {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/apps", { credentials: "include", redirect: "manual" }).then((res) => {
                 if (res.ok) {
                     return res.json();
                 } else {
                     console.log("unauthorized");
-                    return {error: {
-                        text: "Unauthorized",
-                        code: "Unauthorized",
-                        status: 401,
-                    }}
+                    return {
+                        error: {
+                            text: "Unauthorized",
+                            code: "Unauthorized",
+                            status: 401,
+                        }
+                    }
                 }
             }).then((data) => {
-                setAppsList({data: data, loaded: true, reload});
+                setAppsList({ data: data, loaded: true, reload });
             });
         }
     }, [appsList.loaded]);
     return appsList;
 }
 
-export function CreateApp({name, description, logo, mainUrl}: {name: string, description: string, logo: string, mainUrl: string}) {
+export function CreateApp({ name, description, logo, mainUrl }: { name: string, description: string, logo: string, mainUrl: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/app", {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "POST", 
-            body: JSON.stringify({name, description, logo, mainUrl}),
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ name, description, logo, mainUrl }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -234,11 +336,13 @@ export function CreateApp({name, description, logo, mainUrl}: {name: string, des
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to create app",
-                    code: "Failed to create app",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to create app",
+                        code: "Failed to create app",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -246,13 +350,13 @@ export function CreateApp({name, description, logo, mainUrl}: {name: string, des
     });
 }
 
-export function AddUserToApp({userId, appId}: {userId: string, appId: string}) {
+export function createMDMServer({ name, url, enrollmentToken, isDefault }: { name: string, url: string, enrollmentToken: string, isDefault: boolean }) {
     return new Promise((resolve, reject) => {
-        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/app/" + appId + "/userappaccess", {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "POST", 
-            body: JSON.stringify({userId}),
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/mdmserver", {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ name, url, enrollmentToken, isDefault }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -262,11 +366,43 @@ export function AddUserToApp({userId, appId}: {userId: string, appId: string}) {
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to add user to app",
-                    code: "Failed to add user to app",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to create MDM server",
+                        code: "Failed to create MDM server",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function AddUserToApp({ userId, appId }: { userId: string, appId: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/app/" + appId + "/userappaccess", {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ userId }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to add user to app",
+                        code: "Failed to add user to app",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -276,16 +412,18 @@ export function AddUserToApp({userId, appId}: {userId: string, appId: string}) {
 
 export function getUserByUsername(username: string) {
     return new Promise((resolve, reject) => {
-        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/user/username/" + username, {credentials: "include", redirect: "manual"}).then((res) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/user/username/" + username, { credentials: "include", redirect: "manual" }).then((res) => {
             if (res.ok) {
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Unauthorized",
-                    code: "Unauthorized",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Unauthorized",
+                        code: "Unauthorized",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -293,22 +431,45 @@ export function getUserByUsername(username: string) {
     });
 }
 
-export function removeUserFromApp({accessId, appId}: {accessId: string, appId: string}) {
+export function getDeviceByDeviceName(deviceName: string) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/device/devicename/" + deviceName, { credentials: "include", redirect: "manual" }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Unauthorized",
+                        code: "Unauthorized",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function removeUserFromApp({ accessId, appId }: { accessId: string, appId: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/app/" + appId + "/userappaccess/" + accessId, {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "DELETE", 
+            credentials: "include",
+            redirect: "manual",
+            method: "DELETE",
         }).then((res) => {
             if (res.ok) {
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to remove user from app",
-                    code: "Failed to remove user from app",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to remove user from app",
+                        code: "Failed to remove user from app",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -316,13 +477,13 @@ export function removeUserFromApp({accessId, appId}: {accessId: string, appId: s
     });
 }
 
-export function updateUser({userId, name, username, email, role, domainId}: {userId: string, name: string, username: string, email: string, role: string, domainId: string}) {
+export function updateUser({ userId, name, username, email, role, domainId }: { userId: string, name: string, username: string, email: string, role: string, domainId: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/user/" + userId, {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "PATCH", 
-            body: JSON.stringify({name, username, email, role, domainId}),
+            credentials: "include",
+            redirect: "manual",
+            method: "PATCH",
+            body: JSON.stringify({ name, username, email, role, domainId }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -332,11 +493,13 @@ export function updateUser({userId, name, username, email, role, domainId}: {use
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to update user",
-                    code: "Failed to update user",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to update user",
+                        code: "Failed to update user",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -344,13 +507,13 @@ export function updateUser({userId, name, username, email, role, domainId}: {use
     });
 }
 
-export function setUserPassword({userId, password}: {userId: string, password: string}) {
+export function setUserPassword({ userId, password }: { userId: string, password: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/user/" + userId + "/setpassword", {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "POST", 
-            body: JSON.stringify({password}),
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ password }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -360,11 +523,13 @@ export function setUserPassword({userId, password}: {userId: string, password: s
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to update user password",
-                    code: "Failed to update user password",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to update user password",
+                        code: "Failed to update user password",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -372,13 +537,13 @@ export function setUserPassword({userId, password}: {userId: string, password: s
     });
 }
 
-export function updateApp({appId, name, description, logo, mainUrl, availableForExternal}: {appId: string, name: string, description: string, logo: string, mainUrl: string, availableForExternal: boolean}) {
+export function updateApp({ appId, name, description, logo, mainUrl, availableForExternal, allowedURLs }: { appId: string, name: string, description: string, logo: string, mainUrl: string, availableForExternal: boolean, allowedURLs: string[] }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/app/" + appId, {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "POST", 
-            body: JSON.stringify({name, description, logo, mainUrl, availableForExternal}),
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ name, description, logo, mainUrl, availableForExternal, allowedURLs }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -388,11 +553,13 @@ export function updateApp({appId, name, description, logo, mainUrl, availableFor
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to update app",
-                    code: "Failed to update app",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to update app",
+                        code: "Failed to update app",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -400,13 +567,43 @@ export function updateApp({appId, name, description, logo, mainUrl, availableFor
     });
 }
 
-export function createDomain({domain}: {domain: string}) {
+export function updateDevice({ id, name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName }: { id: string, name: string, hardwareType: string, softwareType: string, os: string, osVersion: string, assignedTo: string, mdmServerId: string, extraInfo: any, displayName: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/device/" + id, {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to update device",
+                        code: "Failed to update device",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function createDomain({ domain }: { domain: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/domain", {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "POST", 
-            body: JSON.stringify({domain}),
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ domain }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -416,11 +613,13 @@ export function createDomain({domain}: {domain: string}) {
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to create domain",
-                    code: "Failed to create domain",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to create domain",
+                        code: "Failed to create domain",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -428,21 +627,23 @@ export function createDomain({domain}: {domain: string}) {
     });
 }
 
-export function verifyDomain({domainId}: {domainId: string}) {
+export function verifyDomain({ domainId }: { domainId: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/domain/" + domainId + "/verify", {
-            credentials: "include", 
-            redirect: "manual", 
+            credentials: "include",
+            redirect: "manual",
         }).then((res) => {
             if (res.ok) {
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to verify domain",
-                    code: "Failed to verify domain",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to verify domain",
+                        code: "Failed to verify domain",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -452,24 +653,26 @@ export function verifyDomain({domainId}: {domainId: string}) {
 
 export function useDomainsList() {
     const reload = () => {
-        setDomainsList({data: null, loaded: false, reload});
+        setDomainsList({ data: null, loaded: false, reload });
     };
-    const [domainsList, setDomainsList] = useState({data: null, loaded: false, reload});
+    const [domainsList, setDomainsList] = useState({ data: null, loaded: false, reload });
     useEffect(() => {
         if (!domainsList.loaded) {
-            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/domains", {credentials: "include", redirect: "manual"}).then((res) => {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/domains", { credentials: "include", redirect: "manual" }).then((res) => {
                 if (res.ok) {
                     return res.json();
                 } else {
                     console.log("unauthorized");
-                    return {error: {
-                        text: "Unauthorized",
-                        code: "Unauthorized",
-                        status: 401,
-                    }}
+                    return {
+                        error: {
+                            text: "Unauthorized",
+                            code: "Unauthorized",
+                            status: 401,
+                        }
+                    }
                 }
             }).then((data) => {
-                setDomainsList({data: data, loaded: true, reload});
+                setDomainsList({ data: data, loaded: true, reload });
             });
         }
     }, [domainsList.loaded]);
@@ -478,37 +681,39 @@ export function useDomainsList() {
 
 export function useGroupsList() {
     const reload = () => {
-        setGroupsList({data: null, loaded: false, reload});
+        setGroupsList({ data: null, loaded: false, reload });
     };
-    const [groupsList, setGroupsList] = useState({data: null, loaded: false, reload});
+    const [groupsList, setGroupsList] = useState({ data: null, loaded: false, reload });
     useEffect(() => {
         if (!groupsList.loaded) {
-            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/groups", {credentials: "include", redirect: "manual"}).then((res) => {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/groups", { credentials: "include", redirect: "manual" }).then((res) => {
                 if (res.ok) {
                     return res.json();
                 } else {
                     console.log("unauthorized");
-                    return {error: {
-                        text: "Unauthorized",
-                        code: "Unauthorized",
-                        status: 401,
-                    }}
+                    return {
+                        error: {
+                            text: "Unauthorized",
+                            code: "Unauthorized",
+                            status: 401,
+                        }
+                    }
                 }
             }).then((data) => {
-                setGroupsList({data: data, loaded: true, reload});
+                setGroupsList({ data: data, loaded: true, reload });
             });
         }
     }, [groupsList.loaded]);
     return groupsList;
 }
 
-export function CreateGroup({name, description, groupname}: {name: string, description: string, groupname: string}) {
+export function CreateGroup({ name, description, groupname }: { name: string, description: string, groupname: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group", {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "POST", 
-            body: JSON.stringify({name, description, groupname}),
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ name, description, groupname }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -518,11 +723,13 @@ export function CreateGroup({name, description, groupname}: {name: string, descr
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to create group",
-                    code: "Failed to create group",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to create group",
+                        code: "Failed to create group",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -530,13 +737,13 @@ export function CreateGroup({name, description, groupname}: {name: string, descr
     });
 }
 
-export function updateGroup({groupId, name, description, groupname}: {groupId: string, name: string, description: string, groupname: string}) {
+export function updateGroup({ groupId, name, description, groupname }: { groupId: string, name: string, description: string, groupname: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId, {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "PATCH", 
-            body: JSON.stringify({name, description, groupname}),
+            credentials: "include",
+            redirect: "manual",
+            method: "PATCH",
+            body: JSON.stringify({ name, description, groupname }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -546,11 +753,13 @@ export function updateGroup({groupId, name, description, groupname}: {groupId: s
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to update group",
-                    code: "Failed to update group",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to update group",
+                        code: "Failed to update group",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -558,13 +767,13 @@ export function updateGroup({groupId, name, description, groupname}: {groupId: s
     });
 }
 
-export function removeUserFromGroup({groupId, userId}: {groupId: string, userId: string}) {
+export function removeUserFromGroup({ groupId, userId }: { groupId: string, userId: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId + "/user/", {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "DELETE", 
-            body: JSON.stringify({userId}),
+            credentials: "include",
+            redirect: "manual",
+            method: "DELETE",
+            body: JSON.stringify({ userId }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -574,11 +783,13 @@ export function removeUserFromGroup({groupId, userId}: {groupId: string, userId:
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to remove user from group",
-                    code: "Failed to remove user from group",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to remove user from group",
+                        code: "Failed to remove user from group",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -586,13 +797,13 @@ export function removeUserFromGroup({groupId, userId}: {groupId: string, userId:
     });
 }
 
-export function addUserToGroup({groupId, userId}: {groupId: string, userId: string}) {
+export function addUserToGroup({ groupId, userId }: { groupId: string, userId: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId + "/user/", {
-            credentials: "include", 
-            redirect: "manual", 
-            method: "POST", 
-            body: JSON.stringify({userId}),
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ userId }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -602,11 +813,13 @@ export function addUserToGroup({groupId, userId}: {groupId: string, userId: stri
                 return res.json();
             } else {
                 console.log("unauthorized");
-                return {error: {
-                    text: "Failed to add user to group",
-                    code: "Failed to add user to group",
-                    status: 401,
-                }}
+                return {
+                    error: {
+                        text: "Failed to add user to group",
+                        code: "Failed to add user to group",
+                        status: 401,
+                    }
+                }
             }
         }).then((data) => {
             resolve(data);
@@ -614,3 +827,62 @@ export function addUserToGroup({groupId, userId}: {groupId: string, userId: stri
     });
 }
 
+export function removeDeviceFromGroup({ groupId, deviceId }: { groupId: string, deviceId: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId + "/device/", {
+            credentials: "include",
+            redirect: "manual",
+            method: "DELETE",
+            body: JSON.stringify({ deviceId }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to remove user from group",
+                        code: "Failed to remove user from group",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function addDeviceToGroup({ groupId, deviceId }: { groupId: string, deviceId: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId + "/device/", {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ deviceId }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to add user to group",
+                        code: "Failed to add user to group",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}

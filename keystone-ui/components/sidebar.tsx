@@ -1,5 +1,5 @@
 "use client";
-import { BuildingIcon, GlobeIcon, Grid2X2Icon, HomeIcon, IdCardLanyardIcon, LaptopMinimalIcon, LayoutDashboard, LayoutGrid, LayoutGridIcon, PenIcon, SettingsIcon, ShieldIcon, UserIcon, UsersIcon } from "lucide-react";
+import { BuildingIcon, GlobeIcon, Grid2X2Icon, HomeIcon, IdCardLanyardIcon, LaptopMinimalIcon, LayoutDashboard, LayoutGrid, LayoutGridIcon, MonitorSmartphoneIcon, PenIcon, ServerIcon, SettingsIcon, ShieldIcon, TabletSmartphoneIcon, UserIcon, UsersIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -58,9 +58,11 @@ export const AdminSidebar = ({ ignoreSize }: { ignoreSize?: boolean }) => {
             <SidebarItem title="Groups" onClick={() => { router.push("/admin/groups" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={UsersIcon} active={path === "/admin/groups"} index={4} />
             <SidebarItem title="Domains" onClick={() => { router.push("/admin/domains" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={GlobeIcon} active={path === "/admin/domains"} index={5} />
             <SidebarItem title="Apps" onClick={() => { router.push("/admin/apps" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={LayoutGridIcon} active={path === "/admin/apps"} index={6} />
+            <SidebarItem title="Devices" onClick={() => { router.push("/admin/devices" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={MonitorSmartphoneIcon} active={path === "/admin/devices"} index={7} />
+            <SidebarItem title="MDM Servers" onClick={() => { router.push("/admin/mdmservers" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={ServerIcon} active={path === "/admin/mdmservers"} index={8} />
             <Separator style={{ margin: "10px 0px" }} />
             <ExtraItems />
-            <SidebarFooter index={9} />
+            <SidebarFooter index={11} />
         </div>
     );
 };
@@ -73,8 +75,8 @@ function ExtraItems() {
         return null
     }
     return <>
-        <SidebarItem title="Your Account" onClick={() => { router.push("/account") }} Icon={UserIcon} active={false} index={7} />
-        <SidebarItem title="Your Apps" onClick={() => { router.push("/apps") }} Icon={LayoutGrid} active={false} index={8} />
+        <SidebarItem title="Your Account" onClick={() => { router.push("/account") }} Icon={UserIcon} active={false} index={9} />
+        <SidebarItem title="Your Apps" onClick={() => { router.push("/apps") }} Icon={LayoutGrid} active={false} index={10} />
         <Separator style={{ margin: "10px 0px" }} />
     </>
 }

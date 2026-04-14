@@ -1,5 +1,5 @@
 import express from "express";
-import { getAppSessionById, getAppSessionToken, getTenantById, listDomains, listGroups, listTenantApps, listTenantUsers } from "../functions.ts";
+import { addUserToGroup, createGroup, getAppSessionById, getAppSessionToken, getTenantById, listDomains, listGroups, listTenantApps, listTenantUsers } from "../functions.ts";
 import { appAuth, requireAuth } from "../webfunctions.ts";
 import cors from "cors";
 import type { app as AppType } from "../generated/prisma/index.js";
@@ -20,7 +20,7 @@ const corsMiddleware = (req: any, callback: any) => {
         callback(null, false);
         return;
     }
-    if (req.keystoneApp.mainUrl != req.headers["origin"] as string) {
+    if (req.keystoneApp.mainUrl != req.headers["origin"] as string && !req.keystoneApp.allowedURLs.includes(req.headers["origin"] as string)) {
         callback(null, false);
         return;
     }
@@ -49,6 +49,21 @@ router.get("/getSessionToken", requireAuth({}), async (req: any, res: any) => {
         // console.log(error);
         res.status(401).json({ error: "unauthorized" });
         return;
+    }
+});
+
+router.post("/createGroup", requireAuth({ redirectTo: "/auth/signin" }), express.json(), async (req: any, res: any) => {
+    if (!req.keystoneApp) {
+        res.status(404).json({ error: "App not found" });
+        return;
+    }
+    try {
+        var group = await createGroup({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), createdBy: req.auth.id, adminCreated: false, type: "Functional" });
+        var newgroup = await addUserToGroup({ groupId: group.id, userId: req.auth.id });
+        res.json(newgroup);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
     }
 });
 

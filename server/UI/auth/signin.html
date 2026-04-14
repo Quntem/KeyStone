@@ -133,6 +133,7 @@
         <h1>Sign In</h1>
         <div class="desc">Using your Quntem Account</div>
         <input type="hidden" name="redirectTo" id="redirectTo">
+        <input type="checkbox" name="infinitesession" id="infinitesession" style="display: none;">
         <label for="username">Username or Email:</label>
         <input type="text" id="username" name="username">
         <br>
@@ -162,6 +163,9 @@
     <script>
         var searchparams = new URLSearchParams(window.location.search);
         document.getElementById("redirectTo").value = searchparams.get("redirectTo");
+        if (searchparams.get("infinitesession").toLowerCase() == "true") {
+            document.getElementById("infinitesession").checked = true;
+        }
     </script>
 </body>
 

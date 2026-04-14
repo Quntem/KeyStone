@@ -1,5 +1,5 @@
 import express from "express";
-import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions, deleteSession, listUserAppAccess, listAppSessions, createAppSession, getUserIdByEmail, createTenant, createUser, getDomainByName, createDomain, updateDomain, updateUser, SetUserPassword, getAppById, getUserAppAccess, getUserAppAccessByUserIdAndAppId, grantUserAppAccess } from "../functions.ts";
+import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions, deleteSession, listUserAppAccess, listAppSessions, createAppSession, getUserIdByEmail, createTenant, createUser, getDomainByName, createDomain, updateDomain, updateUser, SetUserPassword, getAppById, getUserAppAccess, getUserAppAccessByUserIdAndAppId, grantUserAppAccess, createGroup, createDevice, getDeviceById, updateDevice } from "../functions.ts";
 import bodyParser from "body-parser";
 import { requireAuth } from "../webfunctions.ts";
 import isEmail from "is-email";
@@ -9,10 +9,13 @@ var router = express.Router();
 
 router.use(cors({
     credentials: true,
-    origin: [process.env.FRONTEND_URL, process.env.FRONTEND_URL_2, process.env.FRONTEND_URL_3],
+    origin: [process.env.FRONTEND_URL, process.env.FRONTEND_URL_2, process.env.FRONTEND_URL_3, process.env.FRONTEND_URL_4, process.env.FRONTEND_URL_5, process.env.FRONTEND_URL_6, process.env.FRONTEND_URL_7, process.env.FRONTEND_URL_8, process.env.FRONTEND_URL_9, process.env.FRONTEND_URL_10],
 }));
 
 router.get("/signin", async (req: any, res: any) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
     if (req.cookies?.sessionId) {
         res.redirect(req.query.redirectTo || "/auth/ui/showsessiontoken");
         return;
@@ -52,7 +55,7 @@ router.post("/signin", bodyParser.urlencoded({ extended: true }), async (req: an
         return;
     }
     try {
-        var session = await createSession({ userId: userId.id, password: req.body.password });
+        var session = await createSession({ userId: userId.id, password: req.body.password, infiniteSession: req.body.infinitesession });
     } catch (error) {
         res.redirect("/auth/signin" + (req.body.redirectTo ? "?redirectTo=" + req.body.redirectTo : "") + "&error=Invalid username or password");
         return;
@@ -254,6 +257,49 @@ router.get("/publicapp/:appid", async (req: any, res: any) => {
             displayName: tenant.displayName,
         }
     });
+})
+
+router.post("/createGroup", requireAuth({ redirectTo: "/auth/signin" }), async (req: any, res: any) => {
+    try {
+        var group = await createGroup({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), createdBy: req.auth.id, adminCreated: false, type: "Functional" });
+        res.json(group);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.post("/device", express.json(), requireAuth({ redirectTo: "/auth/signin" }), async (req: any, res: any) => {
+    try {
+        var device = await createDevice({ name: req.body.name, hardwareType: req.body.hardwareType, softwareType: req.body.softwareType, os: req.body.os, osVersion: req.body.osVersion, assignedTo: req.body.assignedTo, mdmServerId: req.body.mdmServerId, extraInfo: req.body.extraInfo, displayName: req.body.displayName, tenantId: req.auth.tenantId, isSelfEnrolled: true, enrolledById: req.auth.id });
+        if (!device) {
+            res.status(400).json({ error: "Failed to create device" });
+            return;
+        }
+        res.json(device);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.post("/devicerefresh", async (req: any, res: any) => {
+    try {
+        var device = await getDeviceById({ id: req.headers.authorization.split(" ")[1] });
+        if (device.token !== req.headers.authorization.split(" ")[2]) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+        if (!device) {
+            res.status(400).json({ error: "Failed to get device" });
+            return;
+        }
+        device = await updateDevice({ id: device.id, lastCheckIn: new Date() });
+        res.json(device);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
 })
 
 export { router }

@@ -2,14 +2,14 @@ import express from "express";
 import cors from "cors";
 var router = express.Router();
 
-import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById } from "../functions.ts";
+import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, setTenantGroupCreationPermition, listDevices, createDevice, updateDevice, deleteDevice, addDeviceToGroup, updateMDMServer, deleteMDMServer, listMDMServers, createMDMServer, getDeviceById, getDeviceByDeviceName, removeDeviceFromGroup, getMdmServerById } from "../functions.ts";
 import { requireAuth, requireRole } from "../webfunctions.ts";
 
 router.use(express.json());
 
 router.use(cors({
     credentials: true,
-    origin: [process.env.FRONTEND_URL, process.env.FRONTEND_URL_2, process.env.FRONTEND_URL_3],
+    origin: [process.env.FRONTEND_URL, process.env.FRONTEND_URL_2, process.env.FRONTEND_URL_3, process.env.FRONTEND_URL_4, process.env.FRONTEND_URL_5, process.env.FRONTEND_URL_6, process.env.FRONTEND_URL_7, process.env.FRONTEND_URL_8, process.env.FRONTEND_URL_9, process.env.FRONTEND_URL_10],
 }));
 
 router.get("/users", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
@@ -122,6 +122,16 @@ router.post("/tenant/description", requireAuth({ redirectTo: "/auth/signin" }), 
 router.post("/tenant/displayname", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
         await setTenantDisplayName({ id: req.auth.tenantId, displayName: req.body.displayName });
+        res.json({ success: true });
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.post("/tenant/setGroupCreationPermition", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        await setTenantGroupCreationPermition({ id: req.auth.tenantId, allowGroupCreation: req.body.allowGroupCreation });
         res.json({ success: true });
     } catch (e) {
         //console.log(e);
@@ -308,7 +318,7 @@ router.get("/group/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRol
 
 router.post("/group", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        var group = await createGroup({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, "") });
+        var group = await createGroup({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), createdBy: req.auth.id, adminCreated: true, type: req.body.type || "Organizational" });
         res.json(group);
     } catch (e) {
         //console.log(e);
@@ -346,10 +356,30 @@ router.post("/group/:id/user", requireAuth({ redirectTo: "/auth/signin" }), requ
     }
 });
 
+router.post("/group/:id/device", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var groupDevice = await addDeviceToGroup({ deviceId: req.body.deviceId, groupId: req.params.id });
+        res.json(groupDevice);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
 router.delete("/group/:id/user", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
         var groupUser = await removeUserFromGroup({ userId: req.body.userId, groupId: req.params.id });
         res.json(groupUser);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.delete("/group/:id/device", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var groupDevice = await removeDeviceFromGroup({ deviceId: req.body.deviceId, groupId: req.params.id });
+        res.json(groupDevice);
     } catch (e) {
         //console.log(e);
         res.status(400).json({ error: e.message });
@@ -377,6 +407,148 @@ router.post("/upgradetofulltenant", requireAuth({ redirectTo: "/auth/signin" }),
         var newDomain = await createDomain({ name: domain, creatorId: req.auth.userId, tenantId: req.auth.tenantId });
         var tenant = await UpgradeToFullTenant({ tenantId: req.auth.tenantId });
         res.json(tenant);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.get("/devices", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var devices = await listDevices({ tenantId: req.auth.tenantId });
+        res.json(devices);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.post("/device", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var device = await createDevice({ name: req.body.name, hardwareType: req.body.hardwareType, softwareType: req.body.softwareType, os: req.body.os, osVersion: req.body.osVersion, assignedTo: req.body.assignedTo, mdmServerId: req.body.mdmServerId, extraInfo: req.body.extraInfo, displayName: req.body.displayName, tenantId: req.auth.tenantId, isSelfEnrolled: false, enrolledById: req.auth.id, groups: req.body.groups });
+        if (!device) {
+            res.status(400).json({ error: "Failed to create device" });
+            return;
+        }
+        // if (req.body.groups) {
+        //     for (const groupId of req.body.groups) {
+        //         device.groups.push(await addDeviceToGroup({ deviceId: device.id, groupId }));
+        //     }
+        // }
+        res.json(device);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.get("/device/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var device = await getDeviceById({ id: req.params.id });
+        res.json(device);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.post("/device/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var device = await updateDevice({ id: req.params.id, name: req.body.name, hardwareType: req.body.hardwareType, softwareType: req.body.softwareType, os: req.body.os, osVersion: req.body.osVersion, assignedTo: req.body.assignedTo, mdmServerId: req.body.mdmServerId, extraInfo: req.body.extraInfo, displayName: req.body.displayName });
+        res.json(device);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.get("/device/devicename/:name", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    var device = await getDeviceByDeviceName({ tenantId: req.auth.tenantId, deviceName: req.params.name });
+    if (!device) {
+        res.status(404).json({ error: "Device not found" });
+        return;
+    }
+    res.json(device);
+});
+
+router.delete("/device/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var device = await deleteDevice({ id: req.params.id });
+        res.json(device);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.post("/mdmserver", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var mdmServer = await createMDMServer({ name: req.body.name, tenantId: req.auth.tenantId, url: req.body.url, enrollmentToken: req.body.enrollmentToken, isDefault: req.body.isDefault });
+        res.json(mdmServer);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.post("/mdmserver/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var mdmServer = await updateMDMServer({ id: req.params.id, name: req.body.name, tenantId: req.auth.tenantId, url: req.body.url, enrollmentToken: req.body.enrollmentToken, isDefault: req.body.isDefault });
+        res.json(mdmServer);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.delete("/mdmserver/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var mdmServer = await deleteMDMServer({ id: req.params.id });
+        res.json(mdmServer);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.get("/mdmservers", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var mdmServers = await listMDMServers({ tenantId: req.auth.tenantId });
+        res.json(mdmServers);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.delete("/mdmactions/group/:id/device", async (req: any, res: any) => {
+    const mdmserver = await getMdmServerById({ id: req.headers.mdmserverid });
+    if (!mdmserver) {
+        res.status(404).json({ error: "MDM Server not found" });
+        return;
+    }
+    if (mdmserver.enrollmentToken !== req.headers.authorization) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+    }
+    try {
+        var groupDevice = await removeDeviceFromGroup({ deviceId: req.body.deviceId, groupId: req.params.id });
+        res.json(groupDevice);
+    } catch (e) {
+        //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.post("/mdmactions/group/:id/device", async (req: any, res: any) => {
+    const mdmserver = await getMdmServerById({ id: req.headers.mdmserverid });
+    if (!mdmserver) {
+        res.status(404).json({ error: "MDM Server not found" });
+        return;
+    }
+    if (mdmserver.enrollmentToken !== req.headers.authorization) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+    }
+    try {
+        var groupDevice = await addDeviceToGroup({ deviceId: req.body.deviceId, groupId: req.params.id });
+        res.json(groupDevice);
     } catch (e) {
         //console.log(e);
         res.status(400).json({ error: e.message });

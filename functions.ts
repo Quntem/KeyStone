@@ -1,4 +1,4 @@
-import { PrismaClient, Role, TenantType } from "./generated/prisma/index.js";
+import { DeviceHardwareType, DeviceSoftwareType, GroupType, PrismaClient, Role, TenantType } from "./generated/prisma/index.js";
 import * as bcrypt from "bcrypt";
 import * as dns from "dns/promises";
 
@@ -119,7 +119,7 @@ export function listChildTenants({ tenantId }: { tenantId: string }) {
     });
 }
 
-export async function createSession({ userId, password }: { userId: string, password: string }) {
+export async function createSession({ userId, password, infiniteSession }: { userId: string, password: string, infiniteSession: boolean }) {
     var user = await prisma.user.findUnique({
         where: {
             id: userId,
@@ -135,15 +135,24 @@ export async function createSession({ userId, password }: { userId: string, pass
         return await prisma.session.create({
             data: {
                 userId,
-                expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+                expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 100)),
             },
         });
     } else {
-        return await prisma.session.create({
-            data: {
-                userId,
-            },
-        });
+        if (infiniteSession) {
+            return await prisma.session.create({
+                data: {
+                    userId,
+                    expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 100)),
+                },
+            });
+        } else {
+            return await prisma.session.create({
+                data: {
+                    userId,
+                }
+            });
+        }
     }
 }
 
@@ -191,7 +200,12 @@ export async function getUserById({ id }: { id: string }) {
                 include: {
                     group: true,
                 },
-            }
+            },
+            devices: {
+                include: {
+                    mdmServer: true,
+                },
+            },
         },
         omit: {
             password: true,
@@ -233,6 +247,12 @@ export async function listUsers({ tenantId, path }: { tenantId: string, path?: s
         include: {
             manager: true,
             tenant: true,
+            groups: {
+                include: {
+                    group: true,
+                },
+            },
+            devices: true,
         },
         omit: {
             password: true,
@@ -281,8 +301,9 @@ export function revokeUserAppAccess({ id }: { id: string }) {
     });
 }
 
-export function grantUserAppAccess({ userId, appId }: { userId: string, appId: string }) {
-    return prisma.userAppAccess.create({
+export async function grantUserAppAccess({ userId, appId }: { userId: string, appId: string }) {
+    const sessions = await listSessions({ userId });
+    const userAppAccess = await prisma.userAppAccess.create({
         data: {
             userId,
             appId,
@@ -300,6 +321,13 @@ export function grantUserAppAccess({ userId, appId }: { userId: string, appId: s
             },
         },
     });
+    for (const session of sessions) {
+        await createAppSession({
+            userAppAccessId: userAppAccess.id,
+            sessionId: session.id,
+        });
+    }
+    return userAppAccess;
 }
 
 export function listUserAppAccess({ userId }: { userId: string }) {
@@ -553,6 +581,17 @@ export async function setTenantDescription({ id, description }: { id: string, de
     });
 }
 
+export async function setTenantGroupCreationPermition({ id, allowGroupCreation }: { id: string, allowGroupCreation: boolean }) {
+    return prisma.tenant.update({
+        where: {
+            id,
+        },
+        data: {
+            allowGroupCreation,
+        },
+    });
+}
+
 export async function setTenantDisplayName({ id, displayName }: { id: string, displayName: string }) {
     return prisma.tenant.update({
         where: {
@@ -762,18 +801,26 @@ export async function listGroups({ tenantId }: { tenantId: string }) {
                         },
                     },
                 }
-            }
+            },
+            devices: {
+                include: {
+                    device: true,
+                },
+            },
         },
     });
 }
 
-export async function createGroup({ tenantId, name, description, groupname }: { tenantId: string, name: string, description?: string, groupname: string }) {
+export async function createGroup({ tenantId, name, description, groupname, createdBy, adminCreated, type }: { tenantId: string, name: string, description?: string, groupname: string, createdBy: string, adminCreated: boolean, type: GroupType }) {
     return await prisma.group.create({
         data: {
             name,
             groupname,
             description,
             tenantId,
+            adminCreated,
+            createdBy,
+            type,
         },
     });
 }
@@ -817,6 +864,11 @@ export function getGroupById({ id }: { id: string }) {
                         },
                     },
                 }
+            },
+            devices: {
+                include: {
+                    device: true,
+                },
             },
         },
     });
@@ -888,6 +940,455 @@ export function UpgradeToFullTenant({ tenantId }: { tenantId: string }) {
         },
         data: {
             type: "Organization",
+        },
+    });
+}
+
+export async function createDevice({ name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName, tenantId, isSelfEnrolled, enrolledById, groups }: { name: string, hardwareType: DeviceHardwareType, softwareType: DeviceSoftwareType, os: string, osVersion: string, assignedTo: string, mdmServerId: string | null, extraInfo: any, displayName: string, tenantId: string, isSelfEnrolled: boolean, enrolledById: string, groups?: string[] }) {
+    if (!mdmServerId) {
+        const defaultMDMServer = await prisma.mdmServer.findUnique({
+            where: {
+                tenantId_isDefault: {
+                    tenantId,
+                    isDefault: true,
+                },
+            },
+        });
+        if (!defaultMDMServer) {
+            mdmServerId = null
+        } else {
+            mdmServerId = defaultMDMServer.id;
+        }
+    }
+    const device = await prisma.device.create({
+        data: {
+            name: name.toLowerCase(),
+            displayName: displayName || name,
+            tenantId,
+            hardwareType,
+            softwareType,
+            os,
+            osVersion,
+            assignedTo: assignedTo || isSelfEnrolled ? enrolledById : null,
+            mdmServerId,
+            extraInfo,
+            isSelfEnrolled,
+            enrolledById,
+            lastCheckIn: new Date(),
+            groups: {
+                create: groups.map((group: any) => ({
+                    group: {
+                        connect: {
+                            id: group,
+                        },
+                    },
+                })),
+            },
+        },
+        include: {
+            tenant: true,
+            groups: {
+                include: {
+                    group: true,
+                },
+            },
+            mdmServer: true,
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                },
+            },
+        },
+    });
+    if (mdmServerId) {
+        const mdmServer = await prisma.mdmServer.findUnique({
+            where: {
+                id: mdmServerId,
+            },
+        });
+        if (!mdmServer) {
+            prisma.device.update({
+                where: {
+                    id: device.id,
+                },
+                data: {
+                    mdmServerId: null,
+                },
+            });
+            return device;
+        }
+        const response = await fetch(mdmServer.url + "/api/v1/keystone/webhook/device", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": `Bearer ${mdmServer.enrollmentToken}`,
+            },
+            body: JSON.stringify({
+                "event": "enroll",
+                "tenantId": tenantId,
+                "device": device,
+            }),
+        });
+        const responseData = await response.json();
+        if (!response.ok) {
+            console.log("Failed to enroll device in MDM");
+            await deleteDevice({ id: device.id });
+            return null;
+        } else {
+            const updatedDevice = await prisma.device.update({
+                where: {
+                    id: device.id,
+                },
+                data: {
+                    token: responseData.token.token,
+                },
+                include: {
+                    tenant: true,
+                    groups: {
+                        include: {
+                            group: true,
+                        },
+                    },
+                    mdmServer: true,
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            name: true,
+                            email: true,
+                            role: true,
+                        },
+                    },
+                },
+            });
+            return updatedDevice;
+        }
+    }
+    return device;
+}
+
+export async function updateDevice({ id, name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName, lastCheckIn }: { id: string, name?: string, hardwareType?: DeviceHardwareType, softwareType?: DeviceSoftwareType, os?: string, osVersion?: string, assignedTo?: string, mdmServerId?: string, extraInfo?: any, displayName?: string, lastCheckIn?: Date }) {
+    const device = await prisma.device.findUnique({
+        where: {
+            id,
+        },
+        include: {
+            tenant: true,
+            groups: {
+                include: {
+                    group: true,
+                },
+            },
+            mdmServer: true,
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                },
+            },
+        },
+    });
+    if (!device) {
+        return null;
+    }
+    if (mdmServerId && device.mdmServerId !== mdmServerId) {
+        const mdmServer = await prisma.mdmServer.findUnique({
+            where: {
+                id: mdmServerId,
+            },
+        });
+        if (!mdmServer) {
+            return null;
+        }
+        const response = await fetch(mdmServer.url + "/api/v1/keystone/webhook/device", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": `Bearer ${device.mdmServer.enrollmentToken}`,
+            },
+            body: JSON.stringify({
+                "event": "unenroll",
+                "tenantId": device.tenantId,
+                "device": device,
+            }),
+        });
+        await fetch(mdmServer.url + "/api/v1/keystone/webhook/device", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": `Bearer ${mdmServer.enrollmentToken}`,
+            },
+            body: JSON.stringify({
+                "event": "enroll",
+                "tenantId": device.tenantId,
+                "device": device,
+            }),
+        });
+    }
+    const updatedDevice = await prisma.device.update({
+        where: {
+            id,
+        },
+        data: {
+            name,
+            displayName: displayName || name,
+            hardwareType,
+            softwareType,
+            os,
+            osVersion,
+            assignedTo: assignedTo || null,
+            mdmServerId,
+            extraInfo,
+            lastCheckIn
+        },
+        include: {
+            tenant: true,
+            groups: {
+                include: {
+                    group: true,
+                },
+            },
+            mdmServer: true,
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                },
+            },
+        },
+    });
+    if (device.assignedTo !== updatedDevice.assignedTo || device.displayName !== updatedDevice.displayName) {
+        const response = await fetch(updatedDevice.mdmServer.url + "/api/v1/keystone/webhook/device", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": `Bearer ${updatedDevice.mdmServer.enrollmentToken}`,
+            },
+            body: JSON.stringify({
+                "event": "groupsmodify",
+                "tenantId": device.tenantId,
+                "device": updatedDevice,
+            }),
+        });
+    }
+    return updatedDevice;
+}
+
+export async function deleteDevice({ id }: { id: string }) {
+    return await prisma.device.delete({
+        where: {
+            id,
+        },
+    });
+}
+
+export async function getDeviceById({ id }: { id: string }) {
+    return await prisma.device.findUnique({
+        where: {
+            id,
+        },
+        include: {
+            groups: {
+                include: {
+                    group: true,
+                },
+            },
+            mdmServer: true,
+            tenant: true,
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                },
+            },
+        },
+    });
+}
+
+export async function listDevices({ tenantId }: { tenantId: string }) {
+    return await prisma.device.findMany({
+        where: {
+            tenantId,
+        },
+        include: {
+            groups: {
+                include: {
+                    group: true,
+                },
+            },
+            mdmServer: true,
+            tenant: true,
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                },
+            },
+        },
+    });
+}
+
+export async function addDeviceToGroup({ deviceId, groupId }: { deviceId: string, groupId: string }) {
+    const deviceGroup = await prisma.deviceGroup.create({
+        data: {
+            deviceId,
+            groupId,
+        },
+        include: {
+            group: true,
+            device: true,
+        },
+    });
+    const device = await getDeviceById({ id: deviceId });
+    if (!device?.mdmServer) {
+        return deviceGroup;
+    }
+    const response = await fetch(device?.mdmServer?.url + "/api/v1/keystone/webhook/device", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${device?.mdmServer?.enrollmentToken}`,
+        },
+        body: JSON.stringify({
+            "event": "groupsmodify",
+            "tenantId": device?.tenantId,
+            "device": device,
+        }),
+    });
+    return deviceGroup;
+}
+
+export async function removeDeviceFromGroup({ deviceId, groupId }: { deviceId: string, groupId: string }) {
+    const deviceGroup = await prisma.deviceGroup.delete({
+        where: {
+            deviceId_groupId: {
+                deviceId,
+                groupId,
+            },
+        },
+    });
+    const device = await getDeviceById({ id: deviceId });
+    if (!device?.mdmServer) {
+        return deviceGroup;
+    }
+    const response = await fetch(device?.mdmServer?.url + "/api/v1/keystone/webhook/device", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${device?.mdmServer?.enrollmentToken}`,
+        },
+        body: JSON.stringify({
+            "event": "groupsmodify",
+            "tenantId": device?.tenantId,
+            "device": device,
+        }),
+    });
+    return deviceGroup;
+}
+
+export async function createMDMServer({ name, tenantId, url, enrollmentToken, isDefault }: { name: string, tenantId: string, url: string, enrollmentToken: string, isDefault: boolean }) {
+    return await prisma.mdmServer.create({
+        data: {
+            name,
+            tenantId,
+            url,
+            enrollmentToken,
+            isDefault,
+        },
+    });
+}
+
+export async function updateMDMServer({ id, name, tenantId, url, enrollmentToken, isDefault }: { id: string, name: string, tenantId: string, url: string, enrollmentToken: string, isDefault: boolean }) {
+    return await prisma.mdmServer.update({
+        where: {
+            id,
+        },
+        data: {
+            name,
+            tenantId,
+            url,
+            enrollmentToken,
+            isDefault,
+        },
+    });
+}
+
+export async function deleteMDMServer({ id }: { id: string }) {
+    return await prisma.mdmServer.delete({
+        where: {
+            id,
+        },
+    });
+}
+
+export async function listMDMServers({ tenantId }: { tenantId: string }) {
+    return await prisma.mdmServer.findMany({
+        where: {
+            tenantId,
+        },
+        include: {
+            _count: {
+                select: {
+                    devices: true,
+                },
+            },
+        },
+    });
+}
+
+export async function getDeviceByDeviceName({ tenantId, deviceName }: { tenantId: string, deviceName: string }) {
+    return await prisma.device.findFirst({
+        where: {
+            tenantId,
+            name: deviceName
+        },
+        include: {
+            groups: {
+                include: {
+                    group: true,
+                },
+            },
+            mdmServer: true,
+            tenant: true,
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                },
+            },
+        },
+    });
+}
+
+export async function getMdmServerById({ id }: { id: string }) {
+    return await prisma.mdmServer.findUnique({
+        where: {
+            id,
         },
     });
 }
