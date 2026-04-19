@@ -6,14 +6,16 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'Device Manager',
     description: 'Easily provision thetaOS devices',
     start_url: '/devicemanager',
+    scope: '/devicemanager/',
+    id: 'uk.co.quntem.devicemanager',
     display: 'standalone',
     background_color: '#fff',
     theme_color: '#fff',
     icons: [
       {
-        src: '/icon.svg',
+        src: '/devicemanager.ico',
         sizes: 'any',
-        type: 'image/svg+xml',
+        type: 'image/x-icon',
       },
     ],
   }

@@ -527,6 +527,15 @@ router.delete("/mdmactions/group/:id/device", async (req: any, res: any) => {
         res.status(403).json({ error: "Unauthorized" });
         return;
     }
+    const device = await getDeviceById({ id: req.body.deviceId });
+    if (!device) {
+        res.status(404).json({ error: "Device not found" });
+        return;
+    }
+    if (device.tenantId !== mdmserver.tenantId) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+    }
     try {
         var groupDevice = await removeDeviceFromGroup({ deviceId: req.body.deviceId, groupId: req.params.id });
         res.json(groupDevice);
@@ -543,6 +552,15 @@ router.post("/mdmactions/group/:id/device", async (req: any, res: any) => {
         return;
     }
     if (mdmserver.enrollmentToken !== req.headers.authorization) {
+        res.status(403).json({ error: "Unauthorized" });
+        return;
+    }
+    const device = await getDeviceById({ id: req.body.deviceId });
+    if (!device) {
+        res.status(404).json({ error: "Device not found" });
+        return;
+    }
+    if (device.tenantId !== mdmserver.tenantId) {
         res.status(403).json({ error: "Unauthorized" });
         return;
     }

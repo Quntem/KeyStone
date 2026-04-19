@@ -101,8 +101,8 @@ model groupUser {
   id      String @id @default(cuid())
   userId  String
   groupId String
-  user    User   @relation(fields: [userId], references: [id])
-  group   group  @relation(fields: [groupId], references: [id])
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group   group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@unique([userId, groupId])
 }
@@ -188,8 +188,8 @@ model DeviceGroup {
   id       String @id @default(cuid())
   deviceId String
   groupId  String
-  device   Device @relation(fields: [deviceId], references: [id])
-  group    group  @relation(fields: [groupId], references: [id])
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  group    group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@unique([deviceId, groupId])
 }

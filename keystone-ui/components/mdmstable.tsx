@@ -1,5 +1,5 @@
 "use client"
-import { AddUserToApp, CreateApp, createDomain, createMDMServer, getUserByUsername, removeUserFromApp, updateApp, useAdminAppsList, useTenantsList, useUsersList, verifyDomain } from "@/lib/admin";
+import { AddUserToApp, CreateApp, createDomain, createMDMServer, getUserByUsername, removeUserFromApp, updateApp, updateMDM, useAdminAppsList, useTenantsList, useUsersList, verifyDomain } from "@/lib/admin";
 import { useReactTable, getCoreRowModel, ColumnDef, flexRender, Row } from "@tanstack/react-table";
 import {
     Table,
@@ -105,12 +105,14 @@ const TableRowWithDrawer = ({ row, mdmsListHook }: { row: Row<any>, mdmsListHook
 }
 
 function MDMInfoDrawer({ open, setOpen, mdm, mdmsListHook }: { open: boolean, setOpen: (open: boolean) => void, mdm: any, mdmsListHook: any }) {
-    const [domainUsers, setDomainUsers] = useState<any>(mdm.mdmUsers);
-    const [name, setName] = useState(mdm.name);
-    const [verified, setVerified] = useState(mdm.verified);
+    const [isDefault, setIsDefault] = useState(mdm.isDefault);
     const session = useSession();
     return (
-        <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen}>
+        <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen} onAnimationEnd={(isOpen) => {
+            if (!isOpen && mdm.isDefault !== isDefault) {
+                mdmsListHook.reload();
+            }
+        }}>
             <DrawerContent>
                 <DrawerHeader>
                     <DrawerTitle>{mdm.name}</DrawerTitle>
@@ -120,6 +122,10 @@ function MDMInfoDrawer({ open, setOpen, mdm, mdmsListHook }: { open: boolean, se
                 <div className="drawer-mainarea">
                     <CopyValueRow value={mdm.name} title="MDM Name" />
                     <CopyValueRow value={mdm.id} title="MDM ID" />
+                    <SwitchInput label="Is Default" value={isDefault} setValue={(value) => {
+                        setIsDefault(value);
+                        updateMDM({ id: mdm.id, isDefault: value })
+                    }} />
                 </div>
                 <Separator />
                 <DrawerFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
@@ -156,7 +162,6 @@ export function AddMDMDrawer({ open, setOpen, mdmsListHook }: { open: boolean, s
     const [enrollmentUrl, setEnrollmentUrl] = useState("");
     const [enrollmentToken, setEnrollmentToken] = useState("");
     const [isDefault, setIsDefault] = useState(false);
-    const [unenrollmentUrl, setUnenrollmentUrl] = useState("");
     return (
         <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen}>
             <DrawerTrigger asChild>
@@ -170,7 +175,7 @@ export function AddMDMDrawer({ open, setOpen, mdmsListHook }: { open: boolean, s
                 <div className="drawer-mainarea">
                     <InputField type="text" label="Name" value={name} setValue={setName} />
                     <InputField type="url" label="URL" value={url} setValue={setUrl} />
-                    <InputField type="url" label="Enrollment URL" value={enrollmentUrl} setValue={setEnrollmentUrl} />
+                    <InputField type="text" label="Enrollment Token" value={enrollmentToken} setValue={setEnrollmentToken} />
                     <SwitchInput label="Is Default" value={isDefault} setValue={setIsDefault} />
                 </div>
                 <Separator />

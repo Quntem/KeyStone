@@ -886,3 +886,33 @@ export function addDeviceToGroup({ groupId, deviceId }: { groupId: string, devic
         });
     });
 }
+
+export function updateMDM({ id, isDefault }: { id: string, isDefault: boolean }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/mdmserver/" + id, {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ isDefault }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to update MDM",
+                        code: "Failed to update MDM",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
