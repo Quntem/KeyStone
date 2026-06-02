@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirect</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
+
+        body {
+            font-family: Figtree, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            top: 0;
+            left: 0;
+            position: fixed;
+            background-color: #f5f5f5;
+            color: #666666;
+            font-size: 16px;
+        }
+
+        #signinform {
+            display: flex;
+            flex-direction: column;
+            background-color: #ffffff;
+            padding: 35px;
+            border-radius: 10px;
+            border: 1px solid #e4e4e7;
+            box-shadow: rgba(0, 0, 0, 0.08) 0px 4px 12px;
+        }
+
+        input {
+            border-radius: 5px;
+            border: 1px solid #e4e4e7;
+            padding: 8px 12px;
+            font-family: Figtree, sans-serif;
+            font-size: 16px;
+            width: 200px;
+        }
+
+        button {
+            border-radius: 5px;
+            border: 0px solid #e4e4e7;
+            padding: 10px;
+            background-color: #2ac688;
+            color: #ffffff;
+            font-family: Figtree, sans-serif;
+            font-weight: 400;
+            margin-top: 10px;
+            font-size: 16px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        button:hover {
+            background-color: #25a67f;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            position: fixed;
+            left: 50%;
+            bottom: 20px;
+            transform: translateX(-50%);
+        }
+
+        .logoimg {
+            width: 25px;
+            height: 25px;
+        }
+
+        label {
+            margin-bottom: 10px;
+            color: #999999;
+            font-weight: 400;
+            font-size: 14px;
+        }
+
+        .logotext {
+            margin-left: 10px;
+            font-size: 20px;
+            color: #999999;
+        }
+
+        h1 {
+            margin-top: 10px;
+            font-family: Figtree, sans-serif;
+            font-weight: 500;
+            font-size: 25px;
+            margin-bottom: 5px;
+        }
+
+        div.desc {
+            margin-bottom: 25px;
+            font-size: 14px;
+            color: #999999;
+        }
+
+        .error {
+            margin-top: -10px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #c0392b;
+        }
+
+        .textlogo {
+            height: 25px;
+            width: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="signinform">
+        <img src="/static/img/account_text.svg" alt="Logo" class="textlogo">
+        <h1>Redirect</h1>
+        <div class="desc">Continue to your app using a trusted redirect URL. The session token will be appended as <code>sessionId</code>.</div>
+        <div class="error" id="error" style="display: none;"></div>
+        <div class="desc" id="details" style="margin-bottom: 0;"></div>
+    </div>
+    <div class="logo">
+        <img src="/static/img/account_text.svg" alt="Logo" class="textlogo">
+    </div>
+    <script>
+        var searchparams = new URLSearchParams(window.location.search);
+        var appId = searchparams.get("appId");
+        var redirectUrl = searchparams.get("redirectUrl");
+        var error = searchparams.get("error");
+        var details = document.getElementById("details");
+        if (appId || redirectUrl) {
+            details.innerHTML = "App ID: <strong>" + (appId || "missing") + "</strong><br>Redirect URL: <strong>" + (redirectUrl || "missing") + "</strong><br>Session token: <strong>sessionId</strong>";
+        } else {
+            details.textContent = "Pass `appId` and `redirectUrl` as query parameters.";
+        }
+        if (error) {
+            var errorElement = document.getElementById("error");
+            errorElement.style.display = "block";
+            errorElement.textContent = error;
+        }
+    </script>
+</body>
+
+</html>
