@@ -1,11 +1,60 @@
 import express from "express";
-import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions, deleteSession, listUserAppAccess, listAppSessions, createAppSession, getUserIdByEmail, createTenant, createUser, getDomainByName, createDomain, updateDomain, updateUser, SetUserPassword, getAppById, getUserAppAccess, getUserAppAccessByUserIdAndAppId, grantUserAppAccess, createGroup, createDevice, getDeviceById, updateDevice } from "../functions.ts";
+import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions, deleteSession, listUserAppAccess, listAppSessions, createAppSession, getUserIdByEmail, createTenant, createUser, getDomainByName, createDomain, updateDomain, updateUser, SetUserPassword, getAppById, getUserAppAccess, getUserAppAccessByUserIdAndAppId, grantUserAppAccess, createGroup, createDevice, getDeviceById, updateDevice, getAppSessionToken } from "../functions.ts";
 import bodyParser from "body-parser";
 import { requireAuth } from "../webfunctions.ts";
 import isEmail from "is-email";
 import cors from "cors";
 
 var router = express.Router();
+
+const sessionCookieOptions = {
+    sameSite: "none" as const,
+    secure: true,
+};
+
+function getRedirectOrigin(value?: string) {
+    if (!value) {
+        return undefined;
+    }
+    try {
+        return new URL(value).origin;
+    } catch {
+        return undefined;
+    }
+}
+
+function isAllowedRedirectUrl(app: any, redirectUrl: string) {
+    let parsedUrl: URL;
+    try {
+        parsedUrl = new URL(redirectUrl);
+    } catch {
+        return false;
+    }
+
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        return false;
+    }
+
+    const allowedTargets = new Set<string>();
+    for (const value of [app.mainUrl, ...(app.allowedURLs || [])]) {
+        if (!value) {
+            continue;
+        }
+        allowedTargets.add(value);
+        const origin = getRedirectOrigin(value);
+        if (origin) {
+            allowedTargets.add(origin);
+        }
+    }
+
+    return allowedTargets.has(parsedUrl.origin) || allowedTargets.has(redirectUrl);
+}
+
+function appendSessionTokenToRedirectUrl(redirectUrl: string, sessionToken: string) {
+    const url = new URL(redirectUrl);
+    url.searchParams.set("sessionId", sessionToken);
+    return url.toString();
+}
 
 router.use(cors({
     credentials: true,
@@ -21,6 +70,48 @@ router.get("/signin", async (req: any, res: any) => {
         return;
     }
     res.sendFile("./auth/signin.html", { root: process.cwd() + "/server/UI" });
+});
+
+router.get("/redirect", requireAuth({ redirectTo: "/auth/signin" }), async (req: any, res: any) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    const error = typeof req.query.error === "string" ? req.query.error : "";
+    const appId = typeof req.query.appId === "string" ? req.query.appId.trim() : "";
+    const redirectUrl = typeof req.query.redirectUrl === "string" ? req.query.redirectUrl.trim() : "";
+
+    if (!error && appId && redirectUrl) {
+        const app = await getAppById({ id: appId });
+        if (!app) {
+            const params = new URLSearchParams({ appId, redirectUrl, error: "App not found" });
+            res.redirect(`/auth/redirect?${params.toString()}`);
+            return;
+        }
+        if (isAllowedRedirectUrl(app, redirectUrl)) {
+            try {
+                let appSession = await getAppSessionToken({ appId: app.id, userId: req.auth.id, sessionId: req.cookies.sessionId });
+                if (!appSession?.id) {
+                    const appAccess = await getUserAppAccessByUserIdAndAppId({ userId: req.auth.id, appId: app.id });
+                    if (!appAccess?.id) {
+                        const params = new URLSearchParams({ appId, redirectUrl, error: "App session not found" });
+                        res.redirect(`/auth/redirect?${params.toString()}`);
+                        return;
+                    }
+                    appSession = await createAppSession({ userAppAccessId: appAccess.id, sessionId: req.cookies.sessionId });
+                }
+                res.redirect(appendSessionTokenToRedirectUrl(redirectUrl, appSession.id));
+            } catch {
+                const params = new URLSearchParams({ appId, redirectUrl, error: "App session not found" });
+                res.redirect(`/auth/redirect?${params.toString()}`);
+            }
+            return;
+        }
+        const params = new URLSearchParams({ appId, redirectUrl, error: "Redirect URL is not allowed for this app" });
+        res.redirect(`/auth/redirect?${params.toString()}`);
+        return;
+    }
+
+    res.sendFile("./auth/redirect.html", { root: process.cwd() + "/server/UI" });
 });
 
 router.get("/userblocked", async (req: any, res: any) => {
@@ -64,10 +155,7 @@ router.post("/signin", bodyParser.urlencoded({ extended: true }), async (req: an
     for (const appSession of appSessions) {
         await createAppSession({ userAppAccessId: appSession.id, sessionId: session.id });
     }
-    res.cookie("sessionId", session.id, {
-        sameSite: "none",
-        secure: true,
-    });
+    res.cookie("sessionId", session.id, sessionCookieOptions);
     res.redirect(req.body.redirectTo || "/auth/ui/showsessiontoken");
 });
 
@@ -98,10 +186,7 @@ router.get("/ui/showsessiontoken", requireAuth({ redirectTo: "/auth/signin" }), 
 
 router.get("/logout", requireAuth({ redirectTo: "/auth/signin" }), async (req: any, res: any) => {
     await deleteSession({ sessionId: req.cookies.sessionId });
-    res.clearCookie("sessionId", {
-        sameSite: "none",
-        secure: true,
-    });
+    res.clearCookie("sessionId", sessionCookieOptions);
     res.redirect(req.query.redirectTo || "/auth/signin");
 });
 
@@ -203,10 +288,7 @@ router.post("/setuptenant", express.json(), async (req: any, res: any) => {
     var user = await createUser({ tenantId: tenant.id, username: req.body.username, email: req.body.email, password: req.body.password, name: req.body.name, role: "ADMIN", domainId: domain.id });
     var session = await createSession({ userId: user.id, password: req.body.password });
     await updateDomain({ id: domain.id, name: req.body.domain, creatorId: user.id, tenantId: tenant.id });
-    res.cookie("sessionId", session.id, {
-        sameSite: "none",
-        secure: true,
-    });
+    res.cookie("sessionId", session.id, sessionCookieOptions);
     res.json({ success: true });
 })
 
@@ -214,20 +296,14 @@ router.post("/setupteam", express.json(), async (req: any, res: any) => {
     var tenant = await createTenant({ name: req.body.tenantName.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), type: "Team" });
     var user = await createUser({ tenantId: tenant.id, username: req.body.username, email: req.body.email, password: req.body.password, name: req.body.name, role: "ADMIN", domainId: undefined });
     var session = await createSession({ userId: user.id, password: req.body.password });
-    res.cookie("sessionId", session.id, {
-        sameSite: "none",
-        secure: true,
-    });
+    res.cookie("sessionId", session.id, sessionCookieOptions);
     res.json({ success: true });
 })
 
 router.post("/setuppersonal", express.json(), async (req: any, res: any) => {
     var user = await createUser({ tenantId: undefined, username: req.body.email.replaceAll("@", "_").replaceAll(".", "_"), email: req.body.email, password: req.body.password, name: req.body.name, role: "ADMIN", domainId: undefined });
     var session = await createSession({ userId: user.id, password: req.body.password });
-    res.cookie("sessionId", session.id, {
-        sameSite: "none",
-        secure: true,
-    });
+    res.cookie("sessionId", session.id, sessionCookieOptions);
     res.json({ success: true });
 })
 
