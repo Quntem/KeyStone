@@ -31,10 +31,6 @@ function isAllowedRedirectUrl(app: any, redirectUrl: string) {
         return false;
     }
 
-    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-        return false;
-    }
-
     const allowedTargets = new Set<string>();
     for (const value of [app.mainUrl, ...(app.allowedURLs || [])]) {
         if (!value) {
@@ -47,7 +43,11 @@ function isAllowedRedirectUrl(app: any, redirectUrl: string) {
         }
     }
 
-    return allowedTargets.has(parsedUrl.origin) || allowedTargets.has(redirectUrl);
+    if (parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:") {
+        return allowedTargets.has(parsedUrl.origin) || allowedTargets.has(redirectUrl);
+    }
+
+    return allowedTargets.has(redirectUrl);
 }
 
 function appendSessionTokenToRedirectUrl(redirectUrl: string, sessionToken: string) {
