@@ -123,7 +123,7 @@ function AppInfoDrawer({ open, setOpen, app, appsListHook, groupsListHook }: { o
                     appsListHook.reload();
                 }, 1000);
             }
-        }}>
+    }}>
             <DrawerContent>
                 <DrawerHeader>
                     <DrawerTitle>{app.name}</DrawerTitle>

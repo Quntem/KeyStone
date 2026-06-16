@@ -88,7 +88,7 @@ async function loadResourcesForTenant(tenantId: string) {
         listTenantUsers({ tenantId }),
         listGroups({ tenantId }),
         listDomains({ tenantId }),
-        listTenantApps({ tenantId }),
+        listTenantApps({ tenantId, hideAutohidden: false }),
         listDepartments({ tenantId }),
         listLocations({ tenantId }),
         listOrgRoles(),

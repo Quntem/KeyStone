@@ -175,7 +175,7 @@ router.post("/tenant/setGroupCreationPermition", requireAuth({ redirectTo: "/aut
 });
 
 router.get("/apps", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
-    var apps = await listTenantApps({ tenantId: req.auth.tenantId })
+    var apps = await listTenantApps({ tenantId: req.auth.tenantId, hideAutohidden: true })
     apps.forEach((app) => {
         if (app.tenantId !== req.auth.tenantId) {
             app.secret = "";
@@ -207,7 +207,7 @@ router.post("/app/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole
 
 router.get("/app/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        const apps = await listTenantApps({ tenantId: req.auth.tenantId });
+        const apps = await listTenantApps({ tenantId: req.auth.tenantId, hideAutohidden: true });
         var app = apps.find((item) => item.id === req.params.id);
         if (!app) {
             res.status(404).json({ error: "App not found" });

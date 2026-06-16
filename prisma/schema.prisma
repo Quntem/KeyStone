@@ -21,39 +21,46 @@ enum Role {
 }
 
 model User {
-  id              String          @id @default(cuid())
-  path            String          @default("/")
-  email           String          @unique
+  id              String           @id @default(cuid())
+  path            String           @default("/")
+  email           String           @unique
   password        String
-  role            Role            @default(USER)
+  role            Role             @default(USER)
   username        String
   name            String
   tenantId        String?
-  tenant          tenant?         @relation(fields: [tenantId], references: [id])
+  tenant          tenant?          @relation(fields: [tenantId], references: [id])
   sessions        session[]
   managerId       String?
-  manager         User?           @relation(fields: [managerId], references: [id], name: "managerUsers")
-  managerUsers    User[]          @relation(name: "managerUsers")
+  manager         User?            @relation(fields: [managerId], references: [id], name: "managerUsers")
+  managerUsers    User[]           @relation(name: "managerUsers")
   groups          groupUser[]
   userAppAccess   userAppAccess[]
-  domainsCreator  domain[]        @relation(name: "DomainsCreator")
-  disabled        Boolean         @default(false)
+  domainsCreator  domain[]         @relation(name: "DomainsCreator")
+  disabled        Boolean          @default(false)
   domainId        String?
-  domain          domain?         @relation(fields: [domainId], references: [id], name: "domainUsers")
+  domain          domain?          @relation(fields: [domainId], references: [id], name: "domainUsers")
   devices         Device[]
-  enrolledDevices Device[]        @relation(name: "EnrolledDevices")
+  enrolledDevices Device[]         @relation(name: "EnrolledDevices")
   departments     DepartmentUser[]
   locationId      String?
-  location        location?       @relation(fields: [locationId], references: [id])
+  location        location?        @relation(fields: [locationId], references: [id])
   orgRoles        OrgRoleUser[]
   extraInfo       Json?
   tags            String[]
+
   @@unique([tenantId, username])
 }
 
 enum TenantType {
   Organization
   Team
+}
+
+enum AdminAutoMode {
+  none
+  auto
+  autohidden
 }
 
 model tenant {
@@ -89,26 +96,26 @@ model OrgRoleUser {
 }
 
 model OrgRole {
-  id          String  @id @default(cuid())
+  id          String        @id @default(cuid())
   name        String
   description String?
   users       OrgRoleUser[]
 }
 
 model group {
-  id           String        @id @default(cuid())
+  id           String                         @id @default(cuid())
   name         String
   description  String?
   groupname    String
   users        groupUser[]
-  type         GroupType     @default(Organizational)
+  type         GroupType                      @default(Organizational)
   tenantId     String
-  tenant       tenant        @relation(fields: [tenantId], references: [id])
+  tenant       tenant                         @relation(fields: [tenantId], references: [id])
   domainId     String?
-  domain       domain?       @relation(fields: [domainId], references: [id], name: "domainGroups")
+  domain       domain?                        @relation(fields: [domainId], references: [id], name: "domainGroups")
   email        String?
   createdBy    String?
-  adminCreated Boolean       @default(false)
+  adminCreated Boolean                        @default(false)
   devices      DeviceGroup[]
   conditions   MagicGroupCondition[]
   includeAll   MagicGroupConditionTargetType?
@@ -124,13 +131,13 @@ enum GroupType {
 }
 
 model MagicGroupCondition {
-  id        String @id @default(cuid())
-  groupId   String
-  group     group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  id         String                           @id @default(cuid())
+  groupId    String
+  group      group                            @relation(fields: [groupId], references: [id], onDelete: Cascade)
   targetType MagicGroupConditionTargetType
-  attribute MagicGroupConditionAttributeType
-  operator  MagicGroupConditionOperatorType
-  value     String
+  attribute  MagicGroupConditionAttributeType
+  operator   MagicGroupConditionOperatorType
+  value      String
 }
 
 enum MagicGroupConditionTargetType {
@@ -159,30 +166,30 @@ enum MagicGroupConditionOperatorType {
 }
 
 model DepartmentUser {
-  id        String @id @default(cuid())
-  userId    String
-  user      User   @relation(fields: [userId], references: [id])
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
   departmentId String
-  department department @relation(fields: [departmentId], references: [id])
+  department   department @relation(fields: [departmentId], references: [id])
 }
 
 model department {
-  id          String @id @default(cuid())
+  id          String           @id @default(cuid())
   name        String
   description String?
   tenantId    String
   users       DepartmentUser[]
-  tenant      tenant @relation(fields: [tenantId], references: [id])
+  tenant      tenant           @relation(fields: [tenantId], references: [id])
 }
 
 model location {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   description String?
   address     String?
   tenantId    String
   users       User[]
-  tenant      tenant @relation(fields: [tenantId], references: [id])
+  tenant      tenant   @relation(fields: [tenantId], references: [id])
   devices     Device[]
 }
 
@@ -218,6 +225,7 @@ model app {
   groupAppAccess       GroupAppAccess[]
   mainUrl              String
   availableForExternal Boolean             @default(false)
+  adminAutoMode        AdminAutoMode       @default(none)
   inExternalTenants    ExternalAppAccess[]
   publicExternal       Boolean             @default(false)
 }
@@ -230,6 +238,7 @@ model ExternalAppAccess {
   tenant    tenant    @relation(fields: [tenantId], references: [id])
   expiresAt DateTime?
   createdAt DateTime  @default(now())
+  autoCreated Boolean @default(false)
 
   @@unique([appId, tenantId])
 }
@@ -240,6 +249,7 @@ model userAppAccess {
   appId       String
   expiresAt   DateTime?
   createdAt   DateTime         @default(now())
+  autoCreated Boolean          @default(false)
   user        User             @relation(fields: [userId], references: [id])
   app         app              @relation(fields: [appId], references: [id])
   appSessions userAppSession[]
@@ -248,28 +258,28 @@ model userAppAccess {
 }
 
 model GroupAppAccess {
-  id        String @id @default(cuid())
-  groupId   String
-  group     group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  appId     String
-  app       app    @relation(fields: [appId], references: [id])
-  expiresAt DateTime?
-  createdAt DateTime @default(now())
+  id          String           @id @default(cuid())
+  groupId     String
+  group       group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  appId       String
+  app         app              @relation(fields: [appId], references: [id])
+  expiresAt   DateTime?
+  createdAt   DateTime         @default(now())
   appSessions userAppSession[]
 
   @@unique([groupId, appId])
 }
 
 model userAppSession {
-  id              String        @id @default(cuid())
-  expiresAt       DateTime?
-  createdAt       DateTime      @default(now())
-  userAppAccessId String?
-  userAppAccess   userAppAccess? @relation(fields: [userAppAccessId], references: [id], onDelete: Cascade)
+  id               String          @id @default(cuid())
+  expiresAt        DateTime?
+  createdAt        DateTime        @default(now())
+  userAppAccessId  String?
+  userAppAccess    userAppAccess?  @relation(fields: [userAppAccessId], references: [id], onDelete: Cascade)
   groupAppAccessId String?
-  groupAppAccess  GroupAppAccess? @relation(fields: [groupAppAccessId], references: [id], onDelete: Cascade)
-  sessionId       String
-  session         session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  groupAppAccess   GroupAppAccess? @relation(fields: [groupAppAccessId], references: [id], onDelete: Cascade)
+  sessionId        String
+  session          session         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([userAppAccessId, sessionId])
 }

@@ -1,4 +1,4 @@
-import { DeviceHardwareType, DeviceSoftwareType, GroupType, MagicGroupConditionAttributeType, MagicGroupConditionOperatorType, MagicGroupConditionTargetType, PrismaClient, Role, TenantType } from "./generated/prisma/index.js";
+import { AdminAutoMode, DeviceHardwareType, DeviceSoftwareType, GroupType, MagicGroupConditionAttributeType, MagicGroupConditionOperatorType, MagicGroupConditionTargetType, PrismaClient, Role, TenantType } from "./generated/prisma/index.js";
 import * as bcrypt from "bcrypt";
 import * as dns from "dns/promises";
 
@@ -13,6 +13,148 @@ export function hashPassword(password: string) {
 
 export function comparePassword(password: string, hashedPassword: string) {
     return bcrypt.compareSync(password, hashedPassword);
+}
+
+function isAutoManagedAppMode(adminAutoMode: AdminAutoMode) {
+    return adminAutoMode === AdminAutoMode.auto || adminAutoMode === AdminAutoMode.autohidden;
+}
+
+async function syncAutoAppAccessForApp(appId: string) {
+    const app = await prisma.app.findUnique({
+        where: {
+            id: appId,
+        },
+        select: {
+            id: true,
+            adminAutoMode: true,
+        },
+    });
+    if (!app || !isAutoManagedAppMode(app.adminAutoMode)) {
+        return;
+    }
+    const [tenants, users] = await Promise.all([
+        prisma.tenant.findMany({
+            select: {
+                id: true,
+            },
+        }),
+        prisma.user.findMany({
+            where: {
+                tenantId: {
+                    not: null,
+                },
+            },
+            select: {
+                id: true,
+            },
+        }),
+    ]);
+    if (tenants.length > 0) {
+        await prisma.externalAppAccess.createMany({
+            data: tenants.map((tenant) => ({
+                appId: app.id,
+                tenantId: tenant.id,
+                autoCreated: true,
+            })),
+            skipDuplicates: true,
+        });
+    }
+    if (users.length > 0) {
+        await prisma.userAppAccess.createMany({
+            data: users.map((user) => ({
+                appId: app.id,
+                userId: user.id,
+                autoCreated: true,
+            })),
+            skipDuplicates: true,
+        });
+        await Promise.all(users.map((user) => syncAppSessionsForUser({ userId: user.id })));
+    }
+}
+
+async function clearAutoAppAccessForApp(appId: string) {
+    const userAppAccesses = await prisma.userAppAccess.findMany({
+        where: {
+            appId,
+            autoCreated: true,
+        },
+        select: {
+            id: true,
+        },
+    });
+    await prisma.userAppSession.deleteMany({
+        where: {
+            userAppAccessId: {
+                in: userAppAccesses.map((access) => access.id),
+            },
+        },
+    });
+    await prisma.userAppAccess.deleteMany({
+        where: {
+            appId,
+            autoCreated: true,
+        },
+    });
+    await prisma.externalAppAccess.deleteMany({
+        where: {
+            appId,
+            autoCreated: true,
+        },
+    });
+}
+
+async function syncAutoApps() {
+    const apps = await prisma.app.findMany({
+        where: {
+            adminAutoMode: {
+                in: [AdminAutoMode.auto, AdminAutoMode.autohidden, AdminAutoMode.none],
+            },
+        },
+        select: {
+            id: true,
+            adminAutoMode: true,
+        },
+    });
+    const autoApps = apps.filter((app) => isAutoManagedAppMode(app.adminAutoMode));
+    const clearedApps = apps.filter((app) => app.adminAutoMode === AdminAutoMode.none);
+    if (autoApps.length === 0 && clearedApps.length === 0) {
+        return;
+    }
+    const [tenants, users] = await Promise.all([
+        prisma.tenant.findMany({
+            select: {
+                id: true,
+            },
+        }),
+        prisma.user.findMany({
+            where: {
+                tenantId: {
+                    not: null,
+                },
+            },
+            select: {
+                id: true,
+            },
+        }),
+    ]);
+    await Promise.all(clearedApps.map((app) => clearAutoAppAccessForApp(app.id)));
+    await Promise.all(autoApps.map((app) => prisma.externalAppAccess.createMany({
+        data: tenants.map((tenant) => ({
+            appId: app.id,
+            tenantId: tenant.id,
+            autoCreated: true,
+        })),
+        skipDuplicates: true,
+    })));
+    await Promise.all(autoApps.map((app) => prisma.userAppAccess.createMany({
+        data: users.map((user) => ({
+            appId: app.id,
+            userId: user.id,
+            autoCreated: true,
+        })),
+        skipDuplicates: true,
+    })));
+    await Promise.all(users.map((user) => syncAppSessionsForUser({ userId: user.id })));
 }
 
 async function syncUserDepartments(userId: string, departmentIds: string[]) {
@@ -105,6 +247,7 @@ export async function createUser({
     if (orgRoleIds && orgRoleIds.length > 0) {
         await syncUserOrgRoles(user.id, orgRoleIds);
     }
+    await syncAutoApps();
     await evaluateMagicGroupsForUser({ userId: user.id });
     return user;
 }
@@ -318,7 +461,7 @@ export async function createSession({ userId, password, infiniteSession }: { use
             });
         }
     }
-    await syncAppSessionsForUser({ userId, sessionId: session.id });
+    await syncAutoApps();
     return session;
 }
 
@@ -339,12 +482,14 @@ export async function getSession({ sessionId }: { sessionId: string }) {
 }
 
 export async function createTenant({ name, type }: { name: string, type: string }) {
-    return await prisma.tenant.create({
+    const tenant = await prisma.tenant.create({
         data: {
             name,
             type: type as TenantType,
         },
     });
+    await syncAutoApps();
+    return tenant;
 }
 
 export async function getUserById({ id }: { id: string }) {
@@ -637,7 +782,8 @@ export function userHasAppAccess({ userId, appId }: { userId: string, appId: str
     });
 }
 
-export async function listTenantApps({ tenantId }: { tenantId: string }) {
+export async function listTenantApps({ tenantId, hideAutohidden = false }: { tenantId: string, hideAutohidden?: boolean }) {
+    await syncAutoApps();
     const apps = await prisma.app.findMany({
         where: {
             OR: [
@@ -700,13 +846,14 @@ export async function listTenantApps({ tenantId }: { tenantId: string }) {
         },
     });
     var apps2 = apps.map((item) => {
-        console.log(item.tenantId)
+        if (hideAutohidden && item.adminAutoMode === AdminAutoMode.autohidden) {
+            return null;
+        }
         if (item.tenantId != tenantId) {
             item.secret = ""
         }
         return item
-    })
-    console.log(apps2)
+    }).filter(Boolean)
     return apps2
 }
 
