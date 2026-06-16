@@ -1,5 +1,5 @@
 import express from "express";
-import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions, deleteSession, listUserAppAccess, listAppSessions, createAppSession, getUserIdByEmail, createTenant, createUser, getDomainByName, createDomain, updateDomain, updateUser, SetUserPassword, getAppById, getUserAppAccess, getUserAppAccessByUserIdAndAppId, grantUserAppAccess, createGroup, createDevice, getDeviceById, updateDevice, getAppSessionToken } from "../functions.ts";
+import { createSession, getUserIdByUsername, getTenantByName, getSession, getUserById, getTenantById, listSessions, deleteSession, listAccessibleAppsForUser, listAppSessions, createAppSession, getUserIdByEmail, createTenant, createUser, getDomainByName, createDomain, updateDomain, updateUser, SetUserPassword, getAppById, getUserAppAccess, getUserAppAccessByUserIdAndAppId, grantUserAppAccess, createGroup, createDevice, getDeviceById, updateDevice, getAppSessionToken } from "../functions.ts";
 import bodyParser from "body-parser";
 import { requireAuth } from "../webfunctions.ts";
 import isEmail from "is-email";
@@ -88,17 +88,8 @@ router.get("/redirect", requireAuth({ redirectTo: "/auth/signin" }), async (req:
             return;
         }
         if (isAllowedRedirectUrl(app, redirectUrl)) {
-            try {
-                let appSession = await getAppSessionToken({ appId: app.id, userId: req.auth.id, sessionId: req.cookies.sessionId });
-                if (!appSession?.id) {
-                    const appAccess = await getUserAppAccessByUserIdAndAppId({ userId: req.auth.id, appId: app.id });
-                    if (!appAccess?.id) {
-                        const params = new URLSearchParams({ appId, redirectUrl, error: "App session not found" });
-                        res.redirect(`/auth/redirect?${params.toString()}`);
-                        return;
-                    }
-                    appSession = await createAppSession({ userAppAccessId: appAccess.id, sessionId: req.cookies.sessionId });
-                }
+        try {
+                const appSession = await getAppSessionToken({ appId: app.id, userId: req.auth.id, sessionId: req.cookies.sessionId });
                 res.redirect(appendSessionTokenToRedirectUrl(redirectUrl, appSession.id));
             } catch {
                 const params = new URLSearchParams({ appId, redirectUrl, error: "App session not found" });
@@ -150,10 +141,6 @@ router.post("/signin", bodyParser.urlencoded({ extended: true }), async (req: an
     } catch (error) {
         res.redirect("/auth/signin" + (req.body.redirectTo ? "?redirectTo=" + req.body.redirectTo : "") + "&error=Invalid username or password");
         return;
-    }
-    const appSessions = await listUserAppAccess({ userId: userId.id });
-    for (const appSession of appSessions) {
-        await createAppSession({ userAppAccessId: appSession.id, sessionId: session.id });
     }
     res.cookie("sessionId", session.id, sessionCookieOptions);
     res.redirect(req.body.redirectTo || "/auth/ui/showsessiontoken");
@@ -278,7 +265,7 @@ router.get("/apps", requireAuth({ redirectTo: "/auth/signin" }), async (req: any
         res.status(401).json({ error: "Unauthorized" });
         return;
     }
-    var apps = await listUserAppAccess({ userId: user.id });
+    var apps = await listAccessibleAppsForUser({ userId: user.id });
     res.json(apps);
 });
 
