@@ -20,6 +20,7 @@ export default function OrgRolesPage() {
         data: orgRoles,
         columns: [
             { header: "Name", accessorKey: "name" },
+            { header: "Description", accessorKey: "description" },
             { header: "Users", accessorFn: (row: any) => row._count?.users ?? 0, id: "users" },
             {
                 header: "Actions",
@@ -100,9 +101,11 @@ function OrgRoleActions({ orgRole, orgRolesList }: { orgRole: any, orgRolesList:
 
 function OrgRoleCreateDrawer({ open, setOpen, orgRolesList }: { open: boolean, setOpen: (open: boolean) => void, orgRolesList: any }) {
     const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
     useEffect(() => {
         if (open) {
             setName("");
+            setDescription("");
         }
     }, [open]);
     return (
@@ -113,13 +116,14 @@ function OrgRoleCreateDrawer({ open, setOpen, orgRolesList }: { open: boolean, s
                 </DrawerHeader>
                 <div className="drawer-mainarea">
                     <InputField label="Name" value={name} setValue={setName} />
+                    <InputField label="Description" value={description} setValue={setDescription} />
                 </div>
                 <DrawerFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
                     <DrawerClose asChild>
                         <Button variant="outline"><XIcon size={20} />Cancel</Button>
                     </DrawerClose>
                     <Button onClick={async () => {
-                        const result: any = await createOrgRole({ name });
+                        const result: any = await createOrgRole({ name, description });
                         if (result?.error) {
                             toast.error("Failed to create org role");
                             return;
@@ -136,11 +140,13 @@ function OrgRoleCreateDrawer({ open, setOpen, orgRolesList }: { open: boolean, s
 
 function OrgRoleEditDrawer({ open, setOpen, orgRole, orgRolesList }: { open: boolean, setOpen: (open: boolean) => void, orgRole: any, orgRolesList: any }) {
     const [name, setName] = useState(orgRole.name);
+    const [description, setDescription] = useState(orgRole.description || "");
     useEffect(() => {
         if (open) {
             setName(orgRole.name);
+            setDescription(orgRole.description || "");
         }
-    }, [orgRole.name, open]);
+    }, [orgRole.name, orgRole.description, open]);
     return (
         <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen}>
             <DrawerContent>
@@ -149,13 +155,14 @@ function OrgRoleEditDrawer({ open, setOpen, orgRole, orgRolesList }: { open: boo
                 </DrawerHeader>
                 <div className="drawer-mainarea">
                     <InputField label="Name" value={name} setValue={setName} />
+                    <InputField label="Description" value={description} setValue={setDescription} />
                 </div>
                 <DrawerFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
                     <DrawerClose asChild>
                         <Button variant="outline"><XIcon size={20} />Cancel</Button>
                     </DrawerClose>
                     <Button onClick={async () => {
-                        const result: any = await updateOrgRole({ id: orgRole.id, name });
+                        const result: any = await updateOrgRole({ id: orgRole.id, name, description });
                         if (result?.error) {
                             toast.error("Failed to update org role");
                             return;

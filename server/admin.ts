@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 var router = express.Router();
 
-import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, grantGroupAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, setTenantGroupCreationPermition, listDevices, createDevice, updateDevice, deleteDevice, addDeviceToGroup, updateMDMServer, deleteMDMServer, listMDMServers, createMDMServer, getDeviceById, getDeviceByDeviceName, removeDeviceFromGroup, getMdmServerById, listMagicGroupConditions, createMagicGroupCondition, updateMagicGroupCondition, deleteMagicGroupCondition, listDepartments, listLocations, listOrgRoles, createDepartment, updateDepartment, deleteDepartment, createLocation, updateLocation, deleteLocation, createOrgRole, updateOrgRole, deleteOrgRole, evaluateMagicGroupsForUser, evaluateMagicGroupsForGroup, revokeGroupAppAccess, getGroupAppAccessByGroupIdAndAppId, getGroupAppAccess } from "../functions.ts";
+import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, grantGroupAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, getTenantById, setTenantGroupCreationPermition, listDevices, createDevice, updateDevice, deleteDevice, addDeviceToGroup, updateMDMServer, deleteMDMServer, listMDMServers, createMDMServer, getDeviceById, getDeviceByDeviceName, removeDeviceFromGroup, getMdmServerById, listMagicGroupConditions, createMagicGroupCondition, updateMagicGroupCondition, deleteMagicGroupCondition, listDepartments, listLocations, listOrgRoles, createDepartment, updateDepartment, deleteDepartment, createLocation, updateLocation, deleteLocation, createOrgRole, updateOrgRole, deleteOrgRole, getDepartmentById, getLocationById, getOrgRoleById, evaluateMagicGroupsForUser, evaluateMagicGroupsForGroup, revokeGroupAppAccess, getGroupAppAccessByGroupIdAndAppId, getGroupAppAccess } from "../functions.ts";
 import { requireAuth, requireRole } from "../webfunctions.ts";
 
 router.use(express.json());
@@ -27,6 +27,15 @@ router.get("/tenants", requireAuth({ redirectTo: "/auth/signin" }), requireRole(
     var users = await listChildTenants({ tenantId: req.auth.tenantId })
     //console.log("found users");
     res.json(users);
+});
+
+router.get("/tenant/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        const tenant = await getTenantById({ id: req.params.id });
+        res.json(tenant);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
 });
 
 router.post("/user/:id/setdisabled", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
@@ -400,9 +409,18 @@ router.get("/departments", requireAuth({ redirectTo: "/auth/signin" }), requireR
     }
 });
 
+router.get("/department/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        const department = await getDepartmentById({ id: req.params.id });
+        res.json(department);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
 router.post("/departments", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        const department = await createDepartment({ tenantId: req.auth.tenantId, name: req.body.name });
+        const department = await createDepartment({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description });
         res.json(department);
     } catch (e) {
         res.status(400).json({ error: e.message });
@@ -411,7 +429,7 @@ router.post("/departments", requireAuth({ redirectTo: "/auth/signin" }), require
 
 router.patch("/departments/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        const department = await updateDepartment({ id: req.params.id, tenantId: req.auth.tenantId, name: req.body.name });
+        const department = await updateDepartment({ id: req.params.id, tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description });
         res.json(department);
     } catch (e) {
         res.status(400).json({ error: e.message });
@@ -436,9 +454,18 @@ router.get("/locations", requireAuth({ redirectTo: "/auth/signin" }), requireRol
     }
 });
 
+router.get("/location/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        const location = await getLocationById({ id: req.params.id });
+        res.json(location);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
 router.post("/locations", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        const location = await createLocation({ tenantId: req.auth.tenantId, name: req.body.name });
+        const location = await createLocation({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, address: req.body.address });
         res.json(location);
     } catch (e) {
         res.status(400).json({ error: e.message });
@@ -447,7 +474,7 @@ router.post("/locations", requireAuth({ redirectTo: "/auth/signin" }), requireRo
 
 router.patch("/locations/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        const location = await updateLocation({ id: req.params.id, tenantId: req.auth.tenantId, name: req.body.name });
+        const location = await updateLocation({ id: req.params.id, tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, address: req.body.address });
         res.json(location);
     } catch (e) {
         res.status(400).json({ error: e.message });
@@ -472,9 +499,18 @@ router.get("/orgroles", requireAuth({ redirectTo: "/auth/signin" }), requireRole
     }
 });
 
+router.get("/orgrole/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        const orgRole = await getOrgRoleById({ id: req.params.id });
+        res.json(orgRole);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
 router.post("/orgroles", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        const orgRole = await createOrgRole({ name: req.body.name });
+        const orgRole = await createOrgRole({ name: req.body.name, description: req.body.description });
         res.json(orgRole);
     } catch (e) {
         res.status(400).json({ error: e.message });
@@ -483,7 +519,7 @@ router.post("/orgroles", requireAuth({ redirectTo: "/auth/signin" }), requireRol
 
 router.patch("/orgroles/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        const orgRole = await updateOrgRole({ id: req.params.id, name: req.body.name });
+        const orgRole = await updateOrgRole({ id: req.params.id, name: req.body.name, description: req.body.description });
         res.json(orgRole);
     } catch (e) {
         res.status(400).json({ error: e.message });
@@ -763,6 +799,15 @@ router.get("/mdmservers", requireAuth({ redirectTo: "/auth/signin" }), requireRo
     try {
         var mdmServers = await listMDMServers({ tenantId: req.auth.tenantId });
         res.json(mdmServers);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.get("/mdmserver/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        var mdmServer = await getMdmServerById({ id: req.params.id });
+        res.json(mdmServer);
     } catch (e) {
         res.status(400).json({ error: e.message });
     }

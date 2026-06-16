@@ -728,13 +728,13 @@ export function createDomain({ domain }: { domain: string }) {
     });
 }
 
-export function createDepartment({ name }: { name: string }) {
+export function createDepartment({ name, description }: { name: string, description?: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/departments", {
             credentials: "include",
             redirect: "manual",
             method: "POST",
-            body: JSON.stringify({ name }),
+            body: JSON.stringify({ name, description }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -757,13 +757,13 @@ export function createDepartment({ name }: { name: string }) {
     });
 }
 
-export function updateDepartment({ id, name }: { id: string, name: string }) {
+export function updateDepartment({ id, name, description }: { id: string, name: string, description?: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/departments/" + id, {
             credentials: "include",
             redirect: "manual",
             method: "PATCH",
-            body: JSON.stringify({ name }),
+            body: JSON.stringify({ name, description }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -810,13 +810,13 @@ export function deleteDepartment({ id }: { id: string }) {
     });
 }
 
-export function createLocation({ name }: { name: string }) {
+export function createLocation({ name, description, address }: { name: string, description?: string, address?: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/locations", {
             credentials: "include",
             redirect: "manual",
             method: "POST",
-            body: JSON.stringify({ name }),
+            body: JSON.stringify({ name, description, address }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -839,13 +839,13 @@ export function createLocation({ name }: { name: string }) {
     });
 }
 
-export function updateLocation({ id, name }: { id: string, name: string }) {
+export function updateLocation({ id, name, description, address }: { id: string, name: string, description?: string, address?: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/locations/" + id, {
             credentials: "include",
             redirect: "manual",
             method: "PATCH",
-            body: JSON.stringify({ name }),
+            body: JSON.stringify({ name, description, address }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -892,13 +892,13 @@ export function deleteLocation({ id }: { id: string }) {
     });
 }
 
-export function createOrgRole({ name }: { name: string }) {
+export function createOrgRole({ name, description }: { name: string, description?: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/orgroles", {
             credentials: "include",
             redirect: "manual",
             method: "POST",
-            body: JSON.stringify({ name }),
+            body: JSON.stringify({ name, description }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -921,13 +921,13 @@ export function createOrgRole({ name }: { name: string }) {
     });
 }
 
-export function updateOrgRole({ id, name }: { id: string, name: string }) {
+export function updateOrgRole({ id, name, description }: { id: string, name: string, description?: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/orgroles/" + id, {
             credentials: "include",
             redirect: "manual",
             method: "PATCH",
-            body: JSON.stringify({ name }),
+            body: JSON.stringify({ name, description }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",

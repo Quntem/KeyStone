@@ -20,6 +20,8 @@ export default function LocationsPage() {
         data: locations,
         columns: [
             { header: "Name", accessorKey: "name" },
+            { header: "Description", accessorKey: "description" },
+            { header: "Address", accessorKey: "address" },
             { header: "Users", accessorFn: (row: any) => row._count?.users ?? 0, id: "users" },
             { header: "Devices", accessorFn: (row: any) => row._count?.devices ?? 0, id: "devices" },
             {
@@ -101,9 +103,13 @@ function LocationActions({ location, locationsList }: { location: any, locations
 
 function LocationCreateDrawer({ open, setOpen, locationsList }: { open: boolean, setOpen: (open: boolean) => void, locationsList: any }) {
     const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
+    const [address, setAddress] = useState("");
     useEffect(() => {
         if (open) {
             setName("");
+            setDescription("");
+            setAddress("");
         }
     }, [open]);
     return (
@@ -114,13 +120,15 @@ function LocationCreateDrawer({ open, setOpen, locationsList }: { open: boolean,
                 </DrawerHeader>
                 <div className="drawer-mainarea">
                     <InputField label="Name" value={name} setValue={setName} />
+                    <InputField label="Description" value={description} setValue={setDescription} />
+                    <InputField label="Address" value={address} setValue={setAddress} />
                 </div>
                 <DrawerFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
                     <DrawerClose asChild>
                         <Button variant="outline"><XIcon size={20} />Cancel</Button>
                     </DrawerClose>
                     <Button onClick={async () => {
-                        const result: any = await createLocation({ name });
+                        const result: any = await createLocation({ name, description, address });
                         if (result?.error) {
                             toast.error("Failed to create location");
                             return;
@@ -137,11 +145,15 @@ function LocationCreateDrawer({ open, setOpen, locationsList }: { open: boolean,
 
 function LocationEditDrawer({ open, setOpen, location, locationsList }: { open: boolean, setOpen: (open: boolean) => void, location: any, locationsList: any }) {
     const [name, setName] = useState(location.name);
+    const [description, setDescription] = useState(location.description || "");
+    const [address, setAddress] = useState(location.address || "");
     useEffect(() => {
         if (open) {
             setName(location.name);
+            setDescription(location.description || "");
+            setAddress(location.address || "");
         }
-    }, [location.name, open]);
+    }, [location.name, location.description, location.address, open]);
     return (
         <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen}>
             <DrawerContent>
@@ -150,13 +162,15 @@ function LocationEditDrawer({ open, setOpen, location, locationsList }: { open: 
                 </DrawerHeader>
                 <div className="drawer-mainarea">
                     <InputField label="Name" value={name} setValue={setName} />
+                    <InputField label="Description" value={description} setValue={setDescription} />
+                    <InputField label="Address" value={address} setValue={setAddress} />
                 </div>
                 <DrawerFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
                     <DrawerClose asChild>
                         <Button variant="outline"><XIcon size={20} />Cancel</Button>
                     </DrawerClose>
                     <Button onClick={async () => {
-                        const result: any = await updateLocation({ id: location.id, name });
+                        const result: any = await updateLocation({ id: location.id, name, description, address });
                         if (result?.error) {
                             toast.error("Failed to update location");
                             return;

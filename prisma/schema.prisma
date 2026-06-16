@@ -89,9 +89,10 @@ model OrgRoleUser {
 }
 
 model OrgRole {
-  id    String  @id @default(cuid())
-  name  String
-  users OrgRoleUser[]
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  users       OrgRoleUser[]
 }
 
 model group {
@@ -166,20 +167,23 @@ model DepartmentUser {
 }
 
 model department {
-  id        String @id @default(cuid())
-  name      String
-  tenantId  String
-  users     DepartmentUser[]
-  tenant    tenant @relation(fields: [tenantId], references: [id])
+  id          String @id @default(cuid())
+  name        String
+  description String?
+  tenantId    String
+  users       DepartmentUser[]
+  tenant      tenant @relation(fields: [tenantId], references: [id])
 }
 
 model location {
-  id        String @id @default(cuid())
-  name      String
-  tenantId  String
-  users     User[]
-  tenant    tenant @relation(fields: [tenantId], references: [id])
-  devices   Device[]
+  id          String @id @default(cuid())
+  name        String
+  description String?
+  address     String?
+  tenantId    String
+  users       User[]
+  tenant      tenant @relation(fields: [tenantId], references: [id])
+  devices     Device[]
 }
 
 model groupUser {

@@ -383,6 +383,11 @@ export async function getUserById({ id }: { id: string }) {
                     mdmServer: true,
                 },
             },
+            userAppAccess: {
+                include: {
+                    app: true,
+                },
+            },
         },
         omit: {
             password: true,
@@ -441,6 +446,11 @@ export async function listUsers({ tenantId, path }: { tenantId: string, path?: s
                 },
             },
             devices: true,
+            userAppAccess: {
+                include: {
+                    app: true,
+                },
+            },
         },
         omit: {
             password: true,
@@ -1453,16 +1463,17 @@ export async function listDepartments({ tenantId }: { tenantId: string }) {
     });
 }
 
-export async function createDepartment({ tenantId, name }: { tenantId: string, name: string }) {
+export async function createDepartment({ tenantId, name, description }: { tenantId: string, name: string, description?: string }) {
     return await prisma.department.create({
         data: {
             tenantId,
             name,
+            description,
         },
     });
 }
 
-export async function updateDepartment({ id, tenantId, name }: { id: string, tenantId: string, name: string }) {
+export async function updateDepartment({ id, tenantId, name, description }: { id: string, tenantId: string, name: string, description?: string }) {
     const department = await prisma.department.findUnique({
         where: {
             id,
@@ -1480,6 +1491,7 @@ export async function updateDepartment({ id, tenantId, name }: { id: string, ten
         },
         data: {
             name,
+            description,
         },
     });
 }
@@ -1508,6 +1520,21 @@ export async function deleteDepartment({ id, tenantId }: { id: string, tenantId:
     });
 }
 
+export async function getDepartmentById({ id }: { id: string }) {
+    return await prisma.department.findUnique({
+        where: {
+            id,
+        },
+        include: {
+            _count: {
+                select: {
+                    users: true,
+                },
+            },
+        },
+    });
+}
+
 export async function listLocations({ tenantId }: { tenantId: string }) {
     return await prisma.location.findMany({
         where: {
@@ -1527,16 +1554,18 @@ export async function listLocations({ tenantId }: { tenantId: string }) {
     });
 }
 
-export async function createLocation({ tenantId, name }: { tenantId: string, name: string }) {
+export async function createLocation({ tenantId, name, description, address }: { tenantId: string, name: string, description?: string, address?: string }) {
     return await prisma.location.create({
         data: {
             tenantId,
             name,
+            description,
+            address,
         },
     });
 }
 
-export async function updateLocation({ id, tenantId, name }: { id: string, tenantId: string, name: string }) {
+export async function updateLocation({ id, tenantId, name, description, address }: { id: string, tenantId: string, name: string, description?: string, address?: string }) {
     const location = await prisma.location.findUnique({
         where: {
             id,
@@ -1554,6 +1583,8 @@ export async function updateLocation({ id, tenantId, name }: { id: string, tenan
         },
         data: {
             name,
+            description,
+            address,
         },
     });
 }
@@ -1593,6 +1624,22 @@ export async function deleteLocation({ id, tenantId }: { id: string, tenantId: s
     });
 }
 
+export async function getLocationById({ id }: { id: string }) {
+    return await prisma.location.findUnique({
+        where: {
+            id,
+        },
+        include: {
+            _count: {
+                select: {
+                    users: true,
+                    devices: true,
+                },
+            },
+        },
+    });
+}
+
 export async function listOrgRoles() {
     return await prisma.orgRole.findMany({
         include: {
@@ -1608,21 +1655,38 @@ export async function listOrgRoles() {
     });
 }
 
-export async function createOrgRole({ name }: { name: string }) {
-    return await prisma.orgRole.create({
-        data: {
-            name,
+export async function getOrgRoleById({ id }: { id: string }) {
+    return await prisma.orgRole.findUnique({
+        where: {
+            id,
+        },
+        include: {
+            _count: {
+                select: {
+                    users: true,
+                },
+            },
         },
     });
 }
 
-export async function updateOrgRole({ id, name }: { id: string, name: string }) {
+export async function createOrgRole({ name, description }: { name: string, description?: string }) {
+    return await prisma.orgRole.create({
+        data: {
+            name,
+            description,
+        },
+    });
+}
+
+export async function updateOrgRole({ id, name, description }: { id: string, name: string, description?: string }) {
     return await prisma.orgRole.update({
         where: {
             id,
         },
         data: {
             name,
+            description,
         },
     });
 }

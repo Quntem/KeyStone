@@ -20,6 +20,7 @@ export default function DepartmentsPage() {
         data: departments,
         columns: [
             { header: "Name", accessorKey: "name" },
+            { header: "Description", accessorKey: "description" },
             { header: "Users", accessorFn: (row: any) => row._count?.users ?? 0, id: "users" },
             {
                 header: "Actions",
@@ -100,9 +101,11 @@ function DepartmentActions({ department, departmentsList }: { department: any, d
 
 function DepartmentCreateDrawer({ open, setOpen, departmentsList }: { open: boolean, setOpen: (open: boolean) => void, departmentsList: any }) {
     const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
     useEffect(() => {
         if (open) {
             setName("");
+            setDescription("");
         }
     }, [open]);
     return (
@@ -113,13 +116,14 @@ function DepartmentCreateDrawer({ open, setOpen, departmentsList }: { open: bool
                 </DrawerHeader>
                 <div className="drawer-mainarea">
                     <InputField label="Name" value={name} setValue={setName} />
+                    <InputField label="Description" value={description} setValue={setDescription} />
                 </div>
                 <DrawerFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
                     <DrawerClose asChild>
                         <Button variant="outline"><XIcon size={20} />Cancel</Button>
                     </DrawerClose>
                     <Button onClick={async () => {
-                        const result: any = await createDepartment({ name });
+                        const result: any = await createDepartment({ name, description });
                         if (result?.error) {
                             toast.error("Failed to create department");
                             return;
@@ -136,11 +140,13 @@ function DepartmentCreateDrawer({ open, setOpen, departmentsList }: { open: bool
 
 function DepartmentEditDrawer({ open, setOpen, department, departmentsList }: { open: boolean, setOpen: (open: boolean) => void, department: any, departmentsList: any }) {
     const [name, setName] = useState(department.name);
+    const [description, setDescription] = useState(department.description || "");
     useEffect(() => {
         if (open) {
             setName(department.name);
+            setDescription(department.description || "");
         }
-    }, [department.name, open]);
+    }, [department.name, department.description, open]);
     return (
         <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen}>
             <DrawerContent>
@@ -149,13 +155,14 @@ function DepartmentEditDrawer({ open, setOpen, department, departmentsList }: { 
                 </DrawerHeader>
                 <div className="drawer-mainarea">
                     <InputField label="Name" value={name} setValue={setName} />
+                    <InputField label="Description" value={description} setValue={setDescription} />
                 </div>
                 <DrawerFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
                     <DrawerClose asChild>
                         <Button variant="outline"><XIcon size={20} />Cancel</Button>
                     </DrawerClose>
                     <Button onClick={async () => {
-                        const result: any = await updateDepartment({ id: department.id, name });
+                        const result: any = await updateDepartment({ id: department.id, name, description });
                         if (result?.error) {
                             toast.error("Failed to update department");
                             return;
