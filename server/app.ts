@@ -1,5 +1,5 @@
 import express from "express";
-import { addUserToGroup, createGroup, getAppSessionById, getAppSessionToken, getTenantById, listDomains, listGroups, listTenantApps, listTenantUsers } from "../functions.ts";
+import { addUserToGroup, createGroup, getAppSessionById, getAppSessionToken, getTenantById, listDepartments, listDevices, listDomains, listGroups, listLocations, listMDMServers, listOrgRoles, listTenantApps, listTenantUsers } from "../functions.ts";
 import { appAuth, requireAuth } from "../webfunctions.ts";
 import cors from "cors";
 import type { app as AppType } from "../generated/prisma/index.js";
@@ -83,22 +83,40 @@ router.post("/verifysession", async (req: any, res: any) => {
     res.json(session);
 });
 
+async function loadResourcesForTenant(tenantId: string) {
+    const [users, groups, domains, apps, departments, locations, orgRoles, devices, mdmServers] = await Promise.all([
+        listTenantUsers({ tenantId }),
+        listGroups({ tenantId }),
+        listDomains({ tenantId }),
+        listTenantApps({ tenantId }),
+        listDepartments({ tenantId }),
+        listLocations({ tenantId }),
+        listOrgRoles(),
+        listDevices({ tenantId }),
+        listMDMServers({ tenantId }),
+    ]);
+
+    return {
+        users,
+        groups,
+        domains,
+        apps,
+        departments,
+        locations,
+        orgRoles,
+        orgroles: orgRoles,
+        devices,
+        mdmServers,
+    };
+}
+
 router.get("/resources", requireAuth({}), async (req: any, res: any) => {
     if (!req.keystoneApp) {
         res.status(404).json({ error: "App not found" });
         return;
     }
     try {
-        const users = await listTenantUsers({ tenantId: req.auth.tenantId })
-        const groups = await listGroups({ tenantId: req.auth.tenantId })
-        const domains = await listDomains({ tenantId: req.auth.tenantId })
-        const apps = await listTenantApps({ tenantId: req.auth.tenantId })
-        res.json({
-            users,
-            groups,
-            domains,
-            apps
-        });
+        res.json(await loadResourcesForTenant(req.auth.tenantId));
     } catch (error) {
         // console.log(error);
         res.status(401).json({ error: "unauthorized" });
@@ -117,15 +135,8 @@ router.get("/resources/server/:tenantId", async (req: any, res: any) => {
         return;
     }
     const tenant = await getTenantById({ id: tenantId })
-    const users = await listTenantUsers({ tenantId })
-    const groups = await listGroups({ tenantId })
-    const domains = await listDomains({ tenantId })
-    const apps = await listTenantApps({ tenantId })
     res.json({
-        users,
-        groups,
-        domains,
-        apps,
+        ...(await loadResourcesForTenant(tenantId)),
         tenant
     });
 });

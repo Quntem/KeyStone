@@ -1,5 +1,5 @@
 "use client"
-import { AddUserToApp, CreateApp, getUserByUsername, removeUserFromApp, updateApp, useAdminAppsList, useTenantsList, useUsersList } from "@/lib/admin";
+import { AddGroupToApp, AddUserToApp, CreateApp, getUserByUsername, removeGroupFromApp, removeUserFromApp, updateApp, useAdminAppsList, useGroupsList, useTenantsList, useUsersList } from "@/lib/admin";
 import { useReactTable, getCoreRowModel, ColumnDef, flexRender, Row } from "@tanstack/react-table";
 import {
     Table,
@@ -32,6 +32,7 @@ import { Input } from "./ui/input";
 
 export function AppsTable({ appsListHook }: { appsListHook: any }) {
     const [apps, setApps] = useState<any>([]);
+    const groupsListHook = useGroupsList();
     useEffect(() => {
         if (appsListHook.loaded) {
             setApps(appsListHook.data?.map((app: any) => ({
@@ -77,7 +78,7 @@ export function AppsTable({ appsListHook }: { appsListHook: any }) {
                 </TableHeader>
                 <TableBody>
                     {table.getRowModel().rows.map((row) => (
-                        <TableRowWithDrawer key={row.id} row={row} appsListHook={appsListHook} />
+                        <TableRowWithDrawer key={row.id} row={row} appsListHook={appsListHook} groupsListHook={groupsListHook} />
                     ))}
                 </TableBody>
             </Table>
@@ -85,7 +86,7 @@ export function AppsTable({ appsListHook }: { appsListHook: any }) {
     );
 }
 
-const TableRowWithDrawer = ({ row, appsListHook }: { row: Row<any>, appsListHook: any }) => {
+const TableRowWithDrawer = ({ row, appsListHook, groupsListHook }: { row: Row<any>, appsListHook: any, groupsListHook: any }) => {
     const [open, setOpen] = useState(false);
     return (
         <>
@@ -96,15 +97,17 @@ const TableRowWithDrawer = ({ row, appsListHook }: { row: Row<any>, appsListHook
                     </TableCell>
                 ))}
             </TableRow>
-            <AppInfoDrawer open={open} setOpen={setOpen} app={row.original} appsListHook={appsListHook} />
+            <AppInfoDrawer open={open} setOpen={setOpen} app={row.original} appsListHook={appsListHook} groupsListHook={groupsListHook} />
         </>
     );
 }
 
-function AppInfoDrawer({ open, setOpen, app, appsListHook }: { open: boolean, setOpen: (open: boolean) => void, app: any, appsListHook: any }) {
+function AppInfoDrawer({ open, setOpen, app, appsListHook, groupsListHook }: { open: boolean, setOpen: (open: boolean) => void, app: any, appsListHook: any, groupsListHook: any }) {
     const [userAppAccess, setUserAppAccess] = useState<any>(app.userAppAccess);
+    const [groupAppAccess, setGroupAppAccess] = useState<any>(app.groupAppAccess || []);
     useEffect(() => {
         setUserAppAccess(app.userAppAccess);
+        setGroupAppAccess(app.groupAppAccess || []);
     }, [open]);
     const [name, setName] = useState(app.name);
     const [description, setDescription] = useState(app.description);
@@ -115,7 +118,7 @@ function AppInfoDrawer({ open, setOpen, app, appsListHook }: { open: boolean, se
     const [allowedURLs, setAllowedURLs] = useState(app.allowedURLs);
     return (
         <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen} onClose={() => {
-            if (userAppAccess.length > app.userAppAccess.length || userAppAccess.length < app.userAppAccess.length) {
+            if (userAppAccess.length > app.userAppAccess.length || userAppAccess.length < app.userAppAccess.length || groupAppAccess.length > (app.groupAppAccess?.length || 0) || groupAppAccess.length < (app.groupAppAccess?.length || 0)) {
                 setTimeout(() => {
                     appsListHook.reload();
                 }, 1000);
@@ -128,7 +131,7 @@ function AppInfoDrawer({ open, setOpen, app, appsListHook }: { open: boolean, se
                 </DrawerHeader>
                 <Separator />
                 <div className="drawer-mainarea">
-                    {app.tenantId === session.data?.user?.tenantId ? <>
+                    {app.tenantId === session.data?.user?.tenant?.id ? <>
                         <div style={{ fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px" }}>App Options</div>
                         <div style={{ fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)" }}>Basic Information about the app</div>
                         <InputField label="Name" value={name} setValue={setName} />
@@ -182,7 +185,18 @@ function AppInfoDrawer({ open, setOpen, app, appsListHook }: { open: boolean, se
                             <UserAppAccessRow key={userAppAccessItem.id} userAppAccess={userAppAccessItem} setUserAppAccess={setUserAppAccess} userAppAccessList={userAppAccess} appId={app.id} />
                         ))}</div>
                     </div>
-                    {app.tenantId === session.data?.user?.tenantId ? <>
+                    <div style={{ margin: "20px 20px 0px 20px" }}>
+                        <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>Groups with access</div>
+                        <GroupSearchInput groups={Array.isArray(groupsListHook.data) ? groupsListHook.data : []} onGroupSelect={(group) => {
+                            AddGroupToApp({ groupId: group.id, appId: app.id }).then((data) => {
+                                setGroupAppAccess([...groupAppAccess, data]);
+                            });
+                        }} currentGroups={groupAppAccess} />
+                        <div className="p-3 flex flex-col gap-3 shadow-sm rounded-md bg-card mt-3">{groupAppAccess?.map((groupAppAccessItem: any) => (
+                            <GroupAppAccessRow key={groupAppAccessItem.id} groupAppAccess={groupAppAccessItem} setGroupAppAccess={setGroupAppAccess} groupAppAccessList={groupAppAccess} appId={app.id} />
+                        ))}</div>
+                    </div>
+                    {app.tenantId === session.data?.user?.tenant?.id ? <>
                         <Separator style={{ marginTop: "25px" }} />
 
                         <div style={{ fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px" }}>App Visibility</div>
@@ -195,7 +209,7 @@ function AppInfoDrawer({ open, setOpen, app, appsListHook }: { open: boolean, se
                                 setAvailableForExternal(app.availableForExternal);
                             }}><XIcon size={20} />Discard Changes</Button>
                             <Button disabled={availableForExternal === app.availableForExternal} onClick={() => {
-                                updateApp({ appId: app.id, name, description, logo, mainUrl, availableForExternal }).then(() => {
+                                updateApp({ appId: app.id, name, description, logo, mainUrl, availableForExternal, allowedURLs }).then(() => {
                                     setOpen(false);
                                     setTimeout(() => {
                                         appsListHook.reload();
@@ -286,7 +300,7 @@ export function UserSearchInput({ onUserSelect }: { onUserSelect: (user: any) =>
                     <span style={{ color: "var(--qu-text-secondary)" }} className="select-none text-[14px]">{session?.data?.user?.tenant.name + "/"}</span>
                     <input type="text" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                            getUserByUsername(value).then((data) => {
+                            getUserByUsername(value).then((data: any) => {
                                 if (data?.error) {
                                     console.log(data.error);
                                     setUser(null);
@@ -298,7 +312,7 @@ export function UserSearchInput({ onUserSelect }: { onUserSelect: (user: any) =>
                     }} className="outline-none text-[14px] w-full" />
                 </div>
                 <Button variant="outline" onClick={() => {
-                    getUserByUsername(value).then((data) => {
+                    getUserByUsername(value).then((data: any) => {
                         if (data?.error) {
                             console.log(data.error);
                             setUser(null);
@@ -319,6 +333,65 @@ export function UserSearchInput({ onUserSelect }: { onUserSelect: (user: any) =>
     );
 }
 
+function GroupSearchInput({ groups, currentGroups, onGroupSelect }: { groups: any[]; currentGroups: any[]; onGroupSelect: (group: any) => any }) {
+    const [value, setValue] = useState("");
+    const normalizedValue = value.trim().toLowerCase();
+    const visibleGroups = (groups || []).filter((group) => {
+        if (!normalizedValue) {
+            return false;
+        }
+        if ((currentGroups || []).some((currentGroup) => currentGroup.id === group.id)) {
+            return false;
+        }
+        return [group.name, group.groupname].some((field) => String(field || "").toLowerCase().includes(normalizedValue));
+    }).slice(0, 5);
+    return (
+        <div style={{ padding: "0px 20px 0px 20px" }}>
+            <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "10px" }}>
+                <div className="flex items-center border border-input rounded-md shadow-xs bg-background focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px] transition-[color,box-shadow] px-3 h-9 text-base w-full">
+                    <span style={{ color: "var(--qu-text-secondary)" }} className="select-none text-[14px]">Search groups</span>
+                    <input type="text" value={value} onChange={(e) => setValue(e.target.value)} className="outline-none text-[14px] w-full" />
+                </div>
+            </div>
+            {visibleGroups.length > 0 && <div className="border border-input rounded-md shadow-xs bg-background p-2 mt-[10px] flex flex-col gap-2">
+                {visibleGroups.map((group) => (
+                    <button key={group.id} type="button" className="text-left rounded-md p-2 hover:bg-input/50 transition-all" onClick={() => {
+                        onGroupSelect(group);
+                        setValue("");
+                    }}>
+                        <div className="font-medium text-sm">{group.name}</div>
+                        <div className="text-xs text-muted-foreground">{group.groupname}</div>
+                    </button>
+                ))}
+            </div>}
+        </div>
+    );
+}
+
+function GroupAppAccessRow({ groupAppAccess, setGroupAppAccess, groupAppAccessList, appId }: { groupAppAccess: any, setGroupAppAccess: (groupAppAccess: any) => void, groupAppAccessList: any, appId: string }) {
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    return (
+        <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+                <div className="text-sm font-medium truncate">{groupAppAccess.group.name}</div>
+                <div className="text-xs text-muted-foreground truncate">{groupAppAccess.group.groupname}</div>
+            </div>
+            <div className="flex items-center gap-2">
+                <ConfirmDialog title="Remove Group" description="Are you sure you want to remove this group from the app?" isOpen={confirmOpen} onConfirm={() => {
+                    removeGroupFromApp({ accessId: groupAppAccess.id, appId }).then(() => {
+                        setGroupAppAccess(groupAppAccessList.filter((groupAppAccessItem: any) => groupAppAccessItem.id !== groupAppAccess.id));
+                    });
+                }} onClose={() => {
+                    setConfirmOpen(false);
+                }} />
+                <Button variant="outline" onClick={() => {
+                    setConfirmOpen(true);
+                }}><XIcon size={20} /></Button>
+            </div>
+        </div>
+    );
+}
+
 function ListEditor({ list, setList }: { list: any, setList: any }) {
     const [value, setValue] = useState("");
     return <div>
@@ -334,7 +407,7 @@ function ListEditor({ list, setList }: { list: any, setList: any }) {
                     {item}
                     <div className="flex-1" />
                     <Trash2Icon size={16} onClick={() => {
-                        setList(list.filter((_, i) => i !== index));
+                        setList(list.filter((_: any, i: number) => i !== index));
                     }} />
                 </div>{index < list.length - 1 && <Separator />}</div>
             })}

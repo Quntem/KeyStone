@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 var router = express.Router();
 
-import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, setTenantGroupCreationPermition, listDevices, createDevice, updateDevice, deleteDevice, addDeviceToGroup, updateMDMServer, deleteMDMServer, listMDMServers, createMDMServer, getDeviceById, getDeviceByDeviceName, removeDeviceFromGroup, getMdmServerById, listMagicGroupConditions, createMagicGroupCondition, updateMagicGroupCondition, deleteMagicGroupCondition, listDepartments, listLocations, listOrgRoles, createDepartment, updateDepartment, deleteDepartment, createLocation, updateLocation, deleteLocation, createOrgRole, updateOrgRole, deleteOrgRole, evaluateMagicGroupsForUser, evaluateMagicGroupsForGroup } from "../functions.ts";
+import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, grantGroupAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, setTenantGroupCreationPermition, listDevices, createDevice, updateDevice, deleteDevice, addDeviceToGroup, updateMDMServer, deleteMDMServer, listMDMServers, createMDMServer, getDeviceById, getDeviceByDeviceName, removeDeviceFromGroup, getMdmServerById, listMagicGroupConditions, createMagicGroupCondition, updateMagicGroupCondition, deleteMagicGroupCondition, listDepartments, listLocations, listOrgRoles, createDepartment, updateDepartment, deleteDepartment, createLocation, updateLocation, deleteLocation, createOrgRole, updateOrgRole, deleteOrgRole, evaluateMagicGroupsForUser, evaluateMagicGroupsForGroup, revokeGroupAppAccess, getGroupAppAccessByGroupIdAndAppId, getGroupAppAccess } from "../functions.ts";
 import { requireAuth, requireRole } from "../webfunctions.ts";
 
 router.use(express.json());
@@ -198,7 +198,12 @@ router.post("/app/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole
 
 router.get("/app/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        var app = await getAppById({ id: req.params.id, includeExternal: true });
+        const apps = await listTenantApps({ tenantId: req.auth.tenantId });
+        var app = apps.find((item) => item.id === req.params.id);
+        if (!app) {
+            res.status(404).json({ error: "App not found" });
+            return;
+        }
         res.json(app);
     } catch (e) {
         //console.log(e);
@@ -244,6 +249,38 @@ router.post("/app/:id/userappaccess", requireAuth({ redirectTo: "/auth/signin" }
     }
 });
 
+router.post("/app/:id/groupappaccess", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        const app = await getAppById({ id: req.params.id, includeExternal: true });
+        const group = await getGroupById({ id: req.body.groupId });
+        if (!app) {
+            res.status(404).json({ error: "App not found" });
+            return;
+        }
+        if (!group) {
+            res.status(404).json({ error: "Group not found" });
+            return;
+        }
+        if (group.tenantId !== req.auth.tenantId) {
+            res.status(400).json({ error: "Group does not belong to this tenant" });
+            return;
+        }
+        if (app.tenantId !== req.auth.tenantId && !app.inExternalTenants.some((ext) => ext.tenantId === req.auth.tenantId)) {
+            res.status(400).json({ error: "App does not belong to this tenant" });
+            return;
+        }
+        const existing = await getGroupAppAccessByGroupIdAndAppId({ groupId: req.body.groupId, appId: req.params.id });
+        if (existing) {
+            res.json(existing);
+            return;
+        }
+        const groupAppAccess = await grantGroupAppAccess({ groupId: req.body.groupId, appId: req.params.id });
+        res.json(groupAppAccess);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
 router.delete("/app/:id/userappaccess/:userAppAccessId", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
         const userAppAccess = await getUserAppAccess({ id: req.params.userAppAccessId });
@@ -268,6 +305,28 @@ router.delete("/app/:id/userappaccess/:userAppAccessId", requireAuth({ redirectT
         res.json({ success: true });
     } catch (e) {
         //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.delete("/app/:id/groupappaccess/:groupAppAccessId", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        const groupAppAccess = await getGroupAppAccess({ id: req.params.groupAppAccessId });
+        if (!groupAppAccess) {
+            res.status(404).json({ error: "Group app access not found" });
+            return;
+        }
+        if (groupAppAccess.app.id !== req.params.id) {
+            res.status(400).json({ error: "Group app access does not belong to this app" });
+            return;
+        }
+        if (groupAppAccess.group.tenantId !== req.auth.tenantId) {
+            res.status(400).json({ error: "Group does not belong to this tenant" });
+            return;
+        }
+        await revokeGroupAppAccess({ id: req.params.groupAppAccessId });
+        res.json({ success: true });
+    } catch (e) {
         res.status(400).json({ error: e.message });
     }
 });

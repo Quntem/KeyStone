@@ -434,6 +434,36 @@ export function AddUserToApp({ userId, appId }: { userId: string, appId: string 
     });
 }
 
+export function AddGroupToApp({ groupId, appId }: { groupId: string, appId: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/app/" + appId + "/groupappaccess", {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ groupId }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to add group to app",
+                        code: "Failed to add group to app",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
 export function getUserByUsername(username: string) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/user/username/" + username, { credentials: "include", redirect: "manual" }).then((res) => {
@@ -491,6 +521,31 @@ export function removeUserFromApp({ accessId, appId }: { accessId: string, appId
                     error: {
                         text: "Failed to remove user from app",
                         code: "Failed to remove user from app",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function removeGroupFromApp({ accessId, appId }: { accessId: string, appId: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/app/" + appId + "/groupappaccess/" + accessId, {
+            credentials: "include",
+            redirect: "manual",
+            method: "DELETE",
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to remove group from app",
+                        code: "Failed to remove group from app",
                         status: 401,
                     }
                 }

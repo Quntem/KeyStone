@@ -294,8 +294,9 @@ export async function createSession({ userId, password, infiniteSession }: { use
     if (!comparePassword(password, user.password)) {
         throw new Error("Invalid password");
     }
+    let session;
     if (user.role == Role.SERVICE) {
-        return await prisma.session.create({
+        session = await prisma.session.create({
             data: {
                 userId,
                 expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 100)),
@@ -303,20 +304,22 @@ export async function createSession({ userId, password, infiniteSession }: { use
         });
     } else {
         if (infiniteSession) {
-            return await prisma.session.create({
+            session = await prisma.session.create({
                 data: {
                     userId,
                     expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 100)),
                 },
             });
         } else {
-            return await prisma.session.create({
+            session = await prisma.session.create({
                 data: {
                     userId,
                 }
             });
         }
     }
+    await syncAppSessionsForUser({ userId, sessionId: session.id });
+    return session;
 }
 
 export async function getSession({ sessionId }: { sessionId: string }) {
@@ -498,7 +501,6 @@ export function revokeUserAppAccess({ id }: { id: string }) {
 }
 
 export async function grantUserAppAccess({ userId, appId }: { userId: string, appId: string }) {
-    const sessions = await listSessions({ userId });
     const userAppAccess = await prisma.userAppAccess.create({
         data: {
             userId,
@@ -517,13 +519,47 @@ export async function grantUserAppAccess({ userId, appId }: { userId: string, ap
             },
         },
     });
-    for (const session of sessions) {
-        await createAppSession({
-            userAppAccessId: userAppAccess.id,
-            sessionId: session.id,
-        });
-    }
+    await syncAppSessionsForUser({ userId });
     return userAppAccess;
+}
+
+export async function grantGroupAppAccess({ groupId, appId }: { groupId: string, appId: string }) {
+    const groupAppAccess = await prisma.groupAppAccess.create({
+        data: {
+            groupId,
+            appId,
+        },
+        include: {
+            app: true,
+            group: true,
+        },
+    });
+    await syncGroupAppSessions({ groupAppAccessId: groupAppAccess.id });
+    return groupAppAccess;
+}
+
+export async function revokeGroupAppAccess({ id }: { id: string }) {
+    const groupAppAccess = await prisma.groupAppAccess.findUnique({
+        where: {
+            id,
+        },
+        select: {
+            id: true,
+        },
+    });
+    if (!groupAppAccess) {
+        return null;
+    }
+    await prisma.userAppSession.deleteMany({
+        where: {
+            groupAppAccessId: id,
+        },
+    });
+    return prisma.groupAppAccess.delete({
+        where: {
+            id,
+        },
+    });
 }
 
 export function listUserAppAccess({ userId }: { userId: string }) {
@@ -535,6 +571,18 @@ export function listUserAppAccess({ userId }: { userId: string }) {
             app: true,
         },
     });
+}
+
+export async function listAccessibleAppsForUser({ userId }: { userId: string }) {
+    const accesses = await listAllAppAccessesForUser({ userId });
+    const appsById = new Map<string, any>();
+    for (const access of accesses) {
+        const existing = appsById.get(access.appId);
+        if (!existing || (existing.accessType === "group" && access.accessType === "user")) {
+            appsById.set(access.appId, access);
+        }
+    }
+    return Array.from(appsById.values());
 }
 
 export function createApp({ name, description, logo, allowedURLs, tenantId, mainUrl }: { name: string, description: string, logo: string, allowedURLs: string[], tenantId: string, mainUrl: string }) {
@@ -563,7 +611,7 @@ export function getAppById({ id, includeExternal }: { id: string, includeExterna
                     displayName: true,
                 },
             },
-            inExternalTenants: includeExternal
+            inExternalTenants: includeExternal,
         },
     });
 }
@@ -611,6 +659,23 @@ export async function listTenantApps({ tenantId }: { tenantId: string }) {
                             name: true,
                             email: true,
                             role: true,
+                        },
+                    },
+                },
+            },
+            groupAppAccess: {
+                where: {
+                    group: {
+                        tenantId,
+                    },
+                },
+                include: {
+                    group: {
+                        select: {
+                            id: true,
+                            name: true,
+                            groupname: true,
+                            tenantId: true,
                         },
                     },
                 },
@@ -667,13 +732,47 @@ export function listAppSessions({ sessionId }: { sessionId: string }) {
     });
 }
 
-export function createAppSession({ userAppAccessId, sessionId }: { userAppAccessId: string, sessionId: string }) {
-    return prisma.userAppSession.create({
-        data: {
-            userAppAccessId,
-            sessionId,
-        },
-    });
+export async function createAppSession({ userAppAccessId, groupAppAccessId, sessionId }: { userAppAccessId?: string, groupAppAccessId?: string, sessionId: string }) {
+    if (userAppAccessId && groupAppAccessId) {
+        throw new Error("Only one app access id can be provided");
+    }
+    if (userAppAccessId) {
+        const existing = await prisma.userAppSession.findUnique({
+            where: {
+                userAppAccessId_sessionId: {
+                    userAppAccessId,
+                    sessionId,
+                },
+            },
+        });
+        if (existing) {
+            return existing;
+        }
+        return await prisma.userAppSession.create({
+            data: {
+                userAppAccessId,
+                sessionId,
+            },
+        });
+    }
+    if (groupAppAccessId) {
+        const existing = await prisma.userAppSession.findFirst({
+            where: {
+                groupAppAccessId,
+                sessionId,
+            },
+        });
+        if (existing) {
+            return existing;
+        }
+        return await prisma.userAppSession.create({
+            data: {
+                groupAppAccessId,
+                sessionId,
+            },
+        });
+    }
+    throw new Error("An app access id is required");
 }
 
 export function deleteAppSession({ id }: { id: string }) {
@@ -713,6 +812,204 @@ export function getUserAppAccessByUserIdAndAppId({ userId, appId }: { userId: st
             },
         },
     });
+}
+
+export function listUserGroupAppAccess({ userId }: { userId: string }) {
+    return prisma.groupAppAccess.findMany({
+        where: {
+            group: {
+                users: {
+                    some: {
+                        userId,
+                    },
+                },
+            },
+        },
+        include: {
+            app: true,
+            group: true,
+        },
+    });
+}
+
+export function listGroupAppAccess({ groupId }: { groupId: string }) {
+    return prisma.groupAppAccess.findMany({
+        where: {
+            groupId,
+        },
+        include: {
+            app: true,
+            group: true,
+        },
+    });
+}
+
+export function getGroupAppAccessByGroupIdAndAppId({ groupId, appId }: { groupId: string, appId: string }) {
+    return prisma.groupAppAccess.findUnique({
+        where: {
+            groupId_appId: {
+                groupId,
+                appId,
+            },
+        },
+    });
+}
+
+export function getGroupAppAccess({ id }: { id: string }) {
+    return prisma.groupAppAccess.findUnique({
+        where: {
+            id,
+        },
+        include: {
+            app: true,
+            group: true,
+        },
+    });
+}
+
+async function listAllAppAccessesForUser({ userId }: { userId: string }) {
+    const [directAccesses, groupAccesses] = await Promise.all([
+        prisma.userAppAccess.findMany({
+            where: {
+                userId,
+            },
+            include: {
+                app: true,
+            },
+        }),
+        listUserGroupAppAccess({ userId }),
+    ]);
+
+    return [
+        ...directAccesses.map((access) => ({
+            ...access,
+            accessType: "user" as const,
+        })),
+        ...groupAccesses.map((access) => ({
+            ...access,
+            accessType: "group" as const,
+        })),
+    ];
+}
+
+async function getAccessibleAppAccessForUser({ userId, appId }: { userId: string, appId: string }) {
+    const directAccess = await getUserAppAccessByUserIdAndAppId({ userId, appId });
+    if (directAccess) {
+        return {
+            ...directAccess,
+            accessType: "user" as const,
+        };
+    }
+    const groupAccess = await prisma.groupAppAccess.findFirst({
+        where: {
+            appId,
+            group: {
+                users: {
+                    some: {
+                        userId,
+                    },
+                },
+            },
+        },
+        include: {
+            app: true,
+            group: true,
+        },
+    });
+    if (groupAccess) {
+        return {
+            ...groupAccess,
+            accessType: "group" as const,
+        };
+    }
+    return null;
+}
+
+async function syncAppSessionsForAccesses({ sessionId, accesses }: { sessionId: string, accesses: Array<{ id: string, accessType: "user" | "group" }> }) {
+    for (const access of accesses) {
+        if (access.accessType === "user") {
+            await createAppSession({ userAppAccessId: access.id, sessionId });
+        } else {
+            await createAppSession({ groupAppAccessId: access.id, sessionId });
+        }
+    }
+}
+
+export async function syncAppSessionsForUser({ userId, sessionId }: { userId: string, sessionId?: string }) {
+    const accesses = await listAllAppAccessesForUser({ userId });
+    const sessions = sessionId ? [{ id: sessionId }] : await listSessions({ userId });
+    await Promise.all(sessions.map((session) => syncAppSessionsForAccesses({
+        sessionId: session.id,
+        accesses: accesses.map((access) => ({
+            id: access.id,
+            accessType: access.accessType,
+        })),
+    })));
+}
+
+async function deleteGroupAppSessionsForUser({ userId, groupId }: { userId: string, groupId: string }) {
+    const sessions = await listSessions({ userId });
+    const groupAccesses = await prisma.groupAppAccess.findMany({
+        where: {
+            groupId,
+        },
+        select: {
+            id: true,
+        },
+    });
+    if (sessions.length === 0 || groupAccesses.length === 0) {
+        return;
+    }
+    await prisma.userAppSession.deleteMany({
+        where: {
+            sessionId: {
+                in: sessions.map((session) => session.id),
+            },
+            groupAppAccessId: {
+                in: groupAccesses.map((access) => access.id),
+            },
+        },
+    });
+}
+
+async function syncGroupAppSessions({ groupAppAccessId }: { groupAppAccessId: string }) {
+    const groupAppAccess = await prisma.groupAppAccess.findUnique({
+        where: {
+            id: groupAppAccessId,
+        },
+        select: {
+            id: true,
+            group: {
+                select: {
+                    users: {
+                        select: {
+                            user: {
+                                select: {
+                                    sessions: {
+                                        where: {
+                                            expiresAt: {
+                                                gt: new Date(),
+                                            },
+                                        },
+                                        select: {
+                                            id: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+    if (!groupAppAccess) {
+        return;
+    }
+    await Promise.all(groupAppAccess.group.users.flatMap((groupUser) => groupUser.user.sessions.map((session) => createAppSession({
+        groupAppAccessId: groupAppAccess.id,
+        sessionId: session.id,
+    }))));
 }
 
 export async function setUserDisabled({ id, disabled }: { id: string, disabled: boolean }) {
@@ -893,90 +1190,165 @@ export async function updateDomain({ id, name, creatorId, tenantId }: { id: stri
     });
 }
 
-export async function getAppSessionToken({ appId, userId, sessionId }: { appId: string, userId: string, sessionId: string }) {
-    const appUserAccess = await userHasAppAccess({ userId, appId });
-    if (!appUserAccess?.id) {
-        throw new Error("User app access not found");
-    }
-    return await prisma.userAppSession.findUnique({
-        where: {
-            userAppAccessId_sessionId: {
-                userAppAccessId: appUserAccess.id,
-                sessionId,
+function selectAppSessionUser() {
+    return {
+        id: true,
+        username: true,
+        name: true,
+        email: true,
+        role: true,
+        groups: {
+            include: {
+                group: true,
             },
         },
-        select: {
-            id: true,
-            userAppAccessId: true,
-            createdAt: true,
-            userAppAccess: {
-                include: {
-                    user: {
-                        select: {
-                            id: true,
-                            username: true,
-                            name: true,
-                            email: true,
-                            role: true,
-                            groups: {
-                                include: {
-                                    group: true,
-                                },
-                            },
-                            tenant: true,
-                            userAppAccess: {
-                                include: {
-                                    app: {
-                                        select: {
-                                            id: true,
-                                            name: true,
-                                            logo: true,
-                                            description: true,
-                                            mainUrl: true
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                    },
-                    app: true,
+        tenant: true,
+    };
+}
+
+function normalizeAppSession(session: any) {
+    const directAccessUser = session?.userAppAccess?.user;
+    const fallbackUser = session?.session?.user;
+    const user = directAccessUser || fallbackUser;
+    const access = session?.userAppAccess
+        ? {
+            ...session.userAppAccess,
+            user,
+        }
+        : session?.groupAppAccess
+            ? {
+                id: session.groupAppAccess.id,
+                app: session.groupAppAccess.app,
+                user,
+                group: session.groupAppAccess.group,
+            }
+            : null;
+    return {
+        id: session.id,
+        userAppAccessId: session.userAppAccessId ?? session.groupAppAccessId ?? null,
+        groupAppAccessId: session.groupAppAccessId ?? null,
+        createdAt: session.createdAt,
+        userAppAccess: access,
+        groupAppAccess: session.groupAppAccess ?? null,
+    };
+}
+
+export async function getAppSessionToken({ appId, userId, sessionId }: { appId: string, userId: string, sessionId: string }) {
+    const appAccess = await getAccessibleAppAccessForUser({ userId, appId });
+    if (!appAccess?.id) {
+        throw new Error("User app access not found");
+    }
+    const sessionSelect = {
+        id: true,
+        userAppAccessId: true,
+        groupAppAccessId: true,
+        createdAt: true,
+        session: {
+            select: {
+                user: {
+                    select: selectAppSessionUser(),
                 },
             },
         },
+        userAppAccess: {
+            include: {
+                user: {
+                    select: selectAppSessionUser(),
+                },
+                app: true,
+            },
+        },
+        groupAppAccess: {
+            include: {
+                group: true,
+                app: true,
+            },
+        },
+    };
+    const session = appAccess.accessType === "user"
+        ? await prisma.userAppSession.findUnique({
+            where: {
+                userAppAccessId_sessionId: {
+                    userAppAccessId: appAccess.id,
+                    sessionId,
+                },
+            },
+            select: sessionSelect,
+        })
+        : await prisma.userAppSession.findFirst({
+            where: {
+                groupAppAccessId: appAccess.id,
+                sessionId,
+            },
+            select: sessionSelect,
+        });
+    if (session) {
+        return normalizeAppSession(session);
+    }
+    if (appAccess.accessType === "user") {
+        await createAppSession({
+            userAppAccessId: appAccess.id,
+            sessionId,
+        });
+        const reloaded = await prisma.userAppSession.findUnique({
+            where: {
+                userAppAccessId_sessionId: {
+                    userAppAccessId: appAccess.id,
+                    sessionId,
+                },
+            },
+            select: sessionSelect,
+        });
+        return normalizeAppSession(reloaded);
+    }
+    await createAppSession({
+        groupAppAccessId: appAccess.id,
+        sessionId,
     });
+    const reloaded = await prisma.userAppSession.findFirst({
+        where: {
+            groupAppAccessId: appAccess.id,
+            sessionId,
+        },
+        select: sessionSelect,
+    });
+    return normalizeAppSession(reloaded);
 }
 
 export async function getAppSessionById({ id }: { id: string }) {
-    return await prisma.userAppSession.findUnique({
+    const session = await prisma.userAppSession.findUnique({
         where: {
             id,
         },
         select: {
             id: true,
             userAppAccessId: true,
+            groupAppAccessId: true,
             createdAt: true,
+            session: {
+                select: {
+                    user: {
+                        select: selectAppSessionUser(),
+                    },
+                },
+            },
             userAppAccess: {
                 include: {
                     user: {
-                        select: {
-                            id: true,
-                            username: true,
-                            name: true,
-                            email: true,
-                            role: true,
-                            groups: {
-                                include: {
-                                    group: true,
-                                },
-                            },
-                            tenant: true,
-                        },
+                        select: selectAppSessionUser(),
                     },
+                    app: true,
+                },
+            },
+            groupAppAccess: {
+                include: {
+                    group: true,
                     app: true,
                 },
             },
         },
     });
+    return session ? normalizeAppSession(session) : null;
 }
 
 export async function listGroups({ tenantId }: { tenantId: string }) {
@@ -986,6 +1358,11 @@ export async function listGroups({ tenantId }: { tenantId: string }) {
         },
         include: {
             conditions: true,
+            appAccess: {
+                include: {
+                    app: true,
+                },
+            },
             users: {
                 include: {
                     user: {
@@ -1399,7 +1776,13 @@ export function getGroupById({ id }: { id: string }) {
             id,
         },
         include: {
+            tenant: true,
             conditions: true,
+            appAccess: {
+                include: {
+                    app: true,
+                },
+            },
             users: {
                 include: {
                     user: {
@@ -1473,7 +1856,9 @@ export async function addUserToGroup({ userId, groupId }: { userId: string, grou
     if (group?.type === GroupType.Magic) {
         throw new Error("Users cannot be manually added to magic groups");
     }
-    return await addUserToGroupMembership({ userId, groupId });
+    const groupUser = await addUserToGroupMembership({ userId, groupId });
+    await syncAppSessionsForUser({ userId });
+    return groupUser;
 }
 
 export async function removeUserFromGroup({ userId, groupId }: { userId: string, groupId: string }) {
@@ -1488,7 +1873,9 @@ export async function removeUserFromGroup({ userId, groupId }: { userId: string,
     if (group?.type === GroupType.Magic) {
         throw new Error("Users cannot be manually removed from magic groups");
     }
-    return await removeUserFromGroupMembership({ userId, groupId });
+    const groupUser = await removeUserFromGroupMembership({ userId, groupId });
+    await deleteGroupAppSessionsForUser({ userId, groupId });
+    return groupUser;
 }
 
 export async function AddTenantToApp({ tenantId, appId }: { tenantId: string, appId: string }) {
@@ -2404,9 +2791,11 @@ export async function evaluateMagicGroupsForUser({ userId }: { userId: string })
         const isMember = user.groups.some((userGroup) => userGroup.groupId === group.id);
 
         if (shouldBeMember && !isMember) {
-            await addUserToGroup({ userId, groupId: group.id });
+            await addUserToGroupMembership({ userId, groupId: group.id });
+            await syncAppSessionsForUser({ userId });
         } else if (!shouldBeMember && isMember) {
-            await removeUserFromGroup({ userId, groupId: group.id });
+            await removeUserFromGroupMembership({ userId, groupId: group.id });
+            await deleteGroupAppSessionsForUser({ userId, groupId: group.id });
         }
     }
 }
