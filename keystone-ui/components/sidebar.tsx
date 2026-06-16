@@ -56,13 +56,16 @@ export const AdminSidebar = ({ ignoreSize }: { ignoreSize?: boolean }) => {
             <SidebarItem title="Users" onClick={() => { router.push("/admin/users" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={IdCardLanyardIcon} active={path === "/admin/users"} index={2} />
             {/* <SidebarItem title="Tenants" onClick={() => {router.push("/admin/tenants")}} Icon={BuildingIcon} active={path === "/admin/tenants"} index={3} /> */}
             <SidebarItem title="Groups" onClick={() => { router.push("/admin/groups" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={UsersIcon} active={path === "/admin/groups"} index={4} />
-            <SidebarItem title="Domains" onClick={() => { router.push("/admin/domains" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={GlobeIcon} active={path === "/admin/domains"} index={5} />
-            <SidebarItem title="Apps" onClick={() => { router.push("/admin/apps" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={LayoutGridIcon} active={path === "/admin/apps"} index={6} />
-            <SidebarItem title="Devices" onClick={() => { router.push("/admin/devices" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={MonitorSmartphoneIcon} active={path === "/admin/devices"} index={7} />
-            <SidebarItem title="MDM Servers" onClick={() => { router.push("/admin/mdmservers" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={ServerIcon} active={path === "/admin/mdmservers"} index={8} />
+            <SidebarItem title="Departments" onClick={() => { router.push("/admin/departments" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={BuildingIcon} active={path === "/admin/departments"} index={5} />
+            <SidebarItem title="Locations" onClick={() => { router.push("/admin/locations" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={GlobeIcon} active={path === "/admin/locations"} index={6} />
+            <SidebarItem title="Org Roles" onClick={() => { router.push("/admin/orgroles" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={IdCardLanyardIcon} active={path === "/admin/orgroles"} index={7} />
+            <SidebarItem title="Domains" onClick={() => { router.push("/admin/domains" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={GlobeIcon} active={path === "/admin/domains"} index={8} />
+            <SidebarItem title="Apps" onClick={() => { router.push("/admin/apps" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={LayoutGridIcon} active={path === "/admin/apps"} index={9} />
+            <SidebarItem title="Devices" onClick={() => { router.push("/admin/devices" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={MonitorSmartphoneIcon} active={path === "/admin/devices"} index={10} />
+            <SidebarItem title="MDM Servers" onClick={() => { router.push("/admin/mdmservers" + (searchParams.has("hideheader") ? "?hideheader" : "") + (searchParams.has("hidehome") ? "&hidehome" : "")) }} Icon={ServerIcon} active={path === "/admin/mdmservers"} index={11} />
             <Separator style={{ margin: "10px 0px" }} />
             <ExtraItems />
-            <SidebarFooter index={11} />
+            <SidebarFooter index={14} />
         </div>
     );
 };

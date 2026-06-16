@@ -1,5 +1,5 @@
 "use client"
-import { AddUserToApp, CreateApp, createDomain, getUserByUsername, removeUserFromApp, updateApp, updateDevice, useAdminAppsList, useTenantsList, useUsersList, verifyDomain } from "@/lib/admin";
+import { AddUserToApp, CreateApp, createDomain, getUserByUsername, removeUserFromApp, updateApp, updateDevice, useAdminAppsList, useLocationsList, useTenantsList, useUsersList, verifyDomain } from "@/lib/admin";
 import { useReactTable, getCoreRowModel, ColumnDef, flexRender, Row } from "@tanstack/react-table";
 import {
     Table,
@@ -23,7 +23,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Button } from "./ui/button";
 import { CheckIcon, ClipboardCopyIcon, PlusIcon, SaveIcon, SearchIcon, XIcon } from "lucide-react";
-import { InputField, PrefixedInput } from "./userstable";
+import { InputField, NullableSelectInput, PrefixedInput } from "./userstable";
 import { useSession } from "@/lib/auth";
 import { UserItem } from "./header";
 import { ConfirmDialog } from "./confirmDialog";
@@ -57,7 +57,8 @@ export function DevicesTable({ devicesListHook }: { devicesListHook: any }) {
                 header: "Name",
                 accessorKey: "name",
                 cell: ({ row }) => {
-                    return row.original.tenant.name + "/" + row.original.name;
+                    const device = row.original as any;
+                    return device.tenant.name + "/" + device.name;
                 }
             },
             {
@@ -93,14 +94,16 @@ export function DevicesTable({ devicesListHook }: { devicesListHook: any }) {
                 header: "Assigned To",
                 accessorKey: "user",
                 cell: ({ row }) => {
-                    return row.original.user?.username ? row.original.tenant.name + "/" + row.original.user?.username : "Not Assigned";
+                    const device = row.original as any;
+                    return device.user?.username ? device.tenant.name + "/" + device.user?.username : "Not Assigned";
                 },
             },
             {
                 header: "MDM Server",
                 accessorKey: "mdmServerId",
                 cell: ({ row }) => {
-                    return row.original.mdmServer?.name || "Not Assigned";
+                    const device = row.original as any;
+                    return device.mdmServer?.name || "Not Assigned";
                 },
             },
         ],
@@ -152,9 +155,31 @@ const TableRowWithDrawer = ({ row, devicesListHook, mdmsListHook, usersListHook,
 function DeviceInfoDrawer({ open, setOpen, device, devicesListHook, mdmsListHook, usersListHook, setDevices }: { open: boolean, setOpen: (open: boolean) => void, device: any, devicesListHook: any, mdmsListHook: any, usersListHook: any, setDevices: (devices: any) => void }) {
     const [name, setName] = useState(device.name);
     const [displayName, setDisplayName] = useState(device.displayName);
-    const [assignedTo, setAssignedTo] = useState(device.assignedTo);
-    const [mdmServerId, setMDMServerId] = useState(device.mdmServerId);
+    const [assignedTo, setAssignedTo] = useState(device.assignedTo || "");
+    const [mdmServerId, setMDMServerId] = useState(device.mdmServerId || "");
+    const [locationId, setLocationId] = useState(device.location?.id || "");
+    const [tagsText, setTagsText] = useState(stringifyTagsInput(device.tags));
+    const locationsList = useLocationsList();
     const session = useSession();
+    const parsedTags = parseTagsInput(tagsText);
+    const currentTags = device.tags || [];
+    const hasChanges = name !== device.name
+        || displayName !== device.displayName
+        || assignedTo !== (device.assignedTo || "")
+        || mdmServerId !== (device.mdmServerId || "")
+        || locationId !== (device.location?.id || "")
+        || !sameStringArrays(parsedTags, currentTags);
+
+    useEffect(() => {
+        if (open) {
+            setName(device.name);
+            setDisplayName(device.displayName);
+            setAssignedTo(device.assignedTo || "");
+            setMDMServerId(device.mdmServerId || "");
+            setLocationId(device.location?.id || "");
+            setTagsText(stringifyTagsInput(device.tags));
+        }
+    }, [open, device]);
     return (
         <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen}>
             <DrawerContent style={{ backgroundColor: "var(--qu-background)" }}>
@@ -176,6 +201,8 @@ function DeviceInfoDrawer({ open, setOpen, device, devicesListHook, mdmsListHook
                     <div style={{ fontSize: "20px", fontWeight: "500", marginLeft: "20px", marginTop: "20px" }}>Device Settings</div>
                     <div style={{ fontSize: "14px", fontWeight: "500", marginLeft: "20px", marginTop: "0px", color: "var(--qu-text-secondary)" }}>Configure settings for this device</div>
                     <InputField label="Display Name" value={displayName} setValue={setDisplayName} />
+                    <NullableSelectInput label="Location" value={locationId} setValue={setLocationId} options={(locationsList.loaded ? locationsList.data : [])?.map((location: any) => ({ id: location.id, name: location.name })) || []} noneLabel="No location" placeholder="Select a location" />
+                    <InputField label="Tags" value={tagsText} setValue={setTagsText} extraInfo="Comma separated tags" />
                     <SelectInput label="Assigned To" value={assignedTo} setValue={(value: string) => {
                         setAssignedTo(value);
                     }} options={[{ id: null, name: "Unassigned", description: "Do not assign this device to any user" }, ...usersListHook.data?.users.map((user: any) => {
@@ -197,7 +224,7 @@ function DeviceInfoDrawer({ open, setOpen, device, devicesListHook, mdmsListHook
                 </div>
                 <Separator />
                 <DrawerFooter className="bg-white" style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
-                    <Button variant="outline" onClick={() => {
+                    <Button variant="outline" disabled={!hasChanges} onClick={() => {
                         updateDevice({
                             id: device.id,
                             name,
@@ -209,6 +236,8 @@ function DeviceInfoDrawer({ open, setOpen, device, devicesListHook, mdmsListHook
                             mdmServerId: mdmServerId,
                             extraInfo: device.extraInfo,
                             displayName,
+                            locationId: locationId || null,
+                            tags: parsedTags,
                         }).then(() => {
                             setDisplayName("");
                             setOpen(false);
@@ -223,6 +252,24 @@ function DeviceInfoDrawer({ open, setOpen, device, devicesListHook, mdmsListHook
             </DrawerContent>
         </Drawer>
     );
+}
+
+function parseTagsInput(tagsText: string) {
+    return tagsText
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+}
+
+function stringifyTagsInput(tags: string[] | undefined) {
+    return (tags || []).join(", ");
+}
+
+function sameStringArrays(left: string[], right: string[]) {
+    if (left.length !== right.length) {
+        return false;
+    }
+    return [...left].sort().join("|") === [...right].sort().join("|");
 }
 
 function DomainUserRow({ userAppAccess, setUserAppAccess, userAppAccessList, appId }: { userAppAccess: any, setUserAppAccess: (userAppAccess: any) => void, userAppAccessList: any, appId: string }) {

@@ -1,5 +1,5 @@
 "use client"
-import { createUser, setUserDisabled, setUserPassword, updateUser, useDomainsList, useUsersList } from "@/lib/admin";
+import { createUser, setUserDisabled, setUserPassword, updateUser, useDepartmentsList, useDomainsList, useLocationsList, useOrgRolesList, useUsersList } from "@/lib/admin";
 import { useReactTable, getCoreRowModel, ColumnDef, flexRender, Row, ColumnFiltersState } from "@tanstack/react-table";
 import {
     Table,
@@ -27,6 +27,7 @@ import { Input } from "./ui/input";
 import { ConfirmDialog, InputDialog } from "./confirmDialog";
 import { useSession } from "@/lib/auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import isEmail from "is-email";
 import { useWindowSize } from "@/lib/screensize";
 import { Switch } from "@/components/ui/switch";
@@ -156,16 +157,53 @@ const TableRowWithDrawer = ({ row, usersListHook }: { row: Row<any>, usersListHo
 
 export function UserInfoDrawer({ open, setOpen, user, usersListHook }: { open: boolean, setOpen: (open: boolean) => void, user: any, usersListHook: any }) {
     const pathname = usePathname();
+    const isAdmin = pathname.startsWith("/admin");
+    const departmentsList = useDepartmentsList();
+    const locationsList = useLocationsList();
+    const orgRolesList = useOrgRolesList();
     const [name, setName] = useState(user.name);
     const [username, setUsername] = useState(user.username);
     const [email, setEmail] = useState(user.email);
     const [role, setRole] = useState(user.role);
     const [openConfirm, setOpenConfirm] = useState(false);
-    const [domainId, setDomainId] = useState(user.domainId);
+    const [domainId, setDomainId] = useState(user.domainId || "");
+    const [locationId, setLocationId] = useState(user.location?.id || "");
+    const [departmentIds, setDepartmentIds] = useState<string[]>((user.departments || []).map((department: any) => department.departmentId || department.department?.id).filter(Boolean));
+    const [orgRoleIds, setOrgRoleIds] = useState<string[]>((user.orgRoles || []).map((orgRole: any) => orgRole.orgRoleId || orgRole.orgRole?.id).filter(Boolean));
+    const [tagsText, setTagsText] = useState(stringifyTagsInput(user.tags));
+
+    useEffect(() => {
+        if (open) {
+            setName(user.name);
+            setUsername(user.username);
+            setEmail(user.email);
+            setRole(user.role);
+            setDomainId(user.domainId || "");
+            setLocationId(user.location?.id || "");
+            setDepartmentIds((user.departments || []).map((department: any) => department.departmentId || department.department?.id).filter(Boolean));
+            setOrgRoleIds((user.orgRoles || []).map((orgRole: any) => orgRole.orgRoleId || orgRole.orgRole?.id).filter(Boolean));
+            setTagsText(stringifyTagsInput(user.tags));
+        }
+    }, [open, user]);
+
+    const parsedTags = parseTagsInput(tagsText);
+    const currentDepartmentIds = (user.departments || []).map((department: any) => department.departmentId || department.department?.id).filter(Boolean);
+    const currentOrgRoleIds = (user.orgRoles || []).map((orgRole: any) => orgRole.orgRoleId || orgRole.orgRole?.id).filter(Boolean);
+    const currentTags = user.tags || [];
+    const hasChanges = name !== user.name
+        || username !== user.username
+        || email !== user.email
+        || role !== user.role
+        || domainId !== (user.domainId || "")
+        || locationId !== (user.location?.id || "")
+        || !sameStringArrays(departmentIds, currentDepartmentIds)
+        || !sameStringArrays(orgRoleIds, currentOrgRoleIds)
+        || !sameStringArrays(parsedTags, currentTags);
+
     return (
         <>
             <Drawer handleOnly direction="right" open={open} onClose={() => {
-                if (name !== user.name || username !== user.username || email !== user.email || role !== user.role) {
+                if (hasChanges) {
                     setOpenConfirm(true);
                 } else {
                     setOpen(false);
@@ -181,24 +219,35 @@ export function UserInfoDrawer({ open, setOpen, user, usersListHook }: { open: b
                         <UserQuickActions user={user} usersListHook={usersListHook} setOpen={setOpen} />
                         <InputField label="Name" value={name} setValue={setName} />
                         <PrefixedInput label="Username" value={username} setValue={setUsername} prefix={user.tenant?.name + "/"} />
-                        {/* <SuffixedInput fitInput label="Email" value={email} setValue={setEmail} suffix="@quintiq.com" pattern="^[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*$" /> */}
-                        {/* <InputField label="Email" value={email} setValue={setEmail} /> */}
-                        {pathname.startsWith("/admin") ? <EmailOwnedDomainInput label="Email" value={email} setValue={setEmail} domainId={domainId} setDomainId={setDomainId} /> : null}
-                        {pathname.startsWith("/admin") ? <SelectInput label="Role" value={role} setValue={setRole} options={[
+                        {isAdmin ? <EmailOwnedDomainInput label="Email" value={email} setValue={setEmail} domainId={domainId} setDomainId={setDomainId} /> : null}
+                        {isAdmin ? <SelectInput label="Role" value={role} setValue={setRole} options={[
                             { id: "ADMIN", name: "Admin", description: "Has full access to everything in the tenant" },
                             { id: "USER", name: "User", description: "Has limited access to the tenant" },
                             { id: "SERVICE", name: "Service", description: "An application or service that can perform actions automatically" }
                         ]} /> : null}
-                        {/* <InputField label="Manager" value={manager} setValue={setManager} /> */}
-                        {/* <InputField label="Tenant" value={tenant} setValue={setTenant} /> */}
+                        {isAdmin ? <NullableSelectInput label="Location" value={locationId} setValue={setLocationId} options={(locationsList.loaded ? locationsList.data : [])?.map((location: any) => ({ id: location.id, name: location.name })) || []} noneLabel="No location" placeholder="Select a location" /> : null}
+                        {isAdmin ? <MultiSelectInput label="Departments" value={departmentIds} setValue={setDepartmentIds} options={(departmentsList.loaded ? departmentsList.data : [])?.map((department: any) => ({ id: department.id, name: department.name })) || []} emptyLabel="No departments available" /> : null}
+                        {isAdmin ? <MultiSelectInput label="Org Roles" value={orgRoleIds} setValue={setOrgRoleIds} options={(orgRolesList.loaded ? orgRolesList.data : [])?.map((orgRole: any) => ({ id: orgRole.id, name: orgRole.name })) || []} emptyLabel="No org roles available" /> : null}
+                        {isAdmin ? <InputField label="Tags" value={tagsText} setValue={setTagsText} extraInfo="Comma separated tags" /> : null}
                     </div>
                     <Separator />
                     <DrawerFooter style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
                         <Button
-                            disabled={name === user.name && username === user.username && email === user.email && role === user.role}
+                            disabled={!hasChanges}
                             variant="outline"
                             onClick={() => {
-                                updateUser({ userId: user.id, name, username, email, role, domainId }).then(() => {
+                                updateUser({
+                                    userId: user.id,
+                                    name,
+                                    username,
+                                    email,
+                                    role,
+                                    domainId,
+                                    locationId: isAdmin ? (locationId || null) : undefined,
+                                    departmentIds: isAdmin ? departmentIds : undefined,
+                                    orgRoleIds: isAdmin ? orgRoleIds : undefined,
+                                    tags: isAdmin ? parsedTags : undefined,
+                                }).then(() => {
                                     setOpen(false);
                                     setTimeout(() => {
                                         usersListHook.reload();
@@ -207,7 +256,7 @@ export function UserInfoDrawer({ open, setOpen, user, usersListHook }: { open: b
                             }}
                         ><SaveIcon size={20} />Save</Button>
                         <Button onClick={() => {
-                            if (name !== user.name || username !== user.username || email !== user.email || role !== user.role || domainId !== user.domainId) {
+                            if (hasChanges) {
                                 setOpenConfirm(true);
                             } else {
                                 setOpen(false);
@@ -227,7 +276,11 @@ export function UserInfoDrawer({ open, setOpen, user, usersListHook }: { open: b
                     setUsername(user.username);
                     setEmail(user.email);
                     setRole(user.role);
-                    setDomainId(user.domainId);
+                    setDomainId(user.domainId || "");
+                    setLocationId(user.location?.id || "");
+                    setDepartmentIds((user.departments || []).map((department: any) => department.departmentId || department.department?.id).filter(Boolean));
+                    setOrgRoleIds((user.orgRoles || []).map((orgRole: any) => orgRole.orgRoleId || orgRole.orgRole?.id).filter(Boolean));
+                    setTagsText(stringifyTagsInput(user.tags));
                 }}
                 onClose={() => setOpenConfirm(false)}
             />
@@ -235,11 +288,11 @@ export function UserInfoDrawer({ open, setOpen, user, usersListHook }: { open: b
     );
 }
 
-export function InputField({ label, value, setValue, type, style, autoComplete, extraInfo, disabled }: { label: string, value: string, setValue: (value: string) => void, type?: HTMLInputTypeAttribute, style?: React.CSSProperties, autoComplete?: HTMLInputTypeAttribute, extraInfo?: React.ReactNode, disabled?: boolean }) {
+export function InputField({ label, value, setValue, type, style, autoComplete, extraInfo, disabled }: { label: string, value: string, setValue?: (value: string) => void, type?: HTMLInputTypeAttribute, style?: React.CSSProperties, autoComplete?: HTMLInputTypeAttribute, extraInfo?: React.ReactNode, disabled?: boolean }) {
     return (
         <div style={{ padding: "20px 20px 0px 20px", ...style }}>
             <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>{label}</div>
-            <Input autoCorrect="off" autoCapitalize="off" style={{ backgroundColor: "var(--header-background)" }} value={value} onChange={(e) => setValue(e.target.value)} type={type} autoComplete={autoComplete} disabled={disabled} />
+            <Input autoCorrect="off" autoCapitalize="off" style={{ backgroundColor: "var(--header-background)" }} value={value} onChange={(e) => setValue?.(e.target.value)} type={type} autoComplete={autoComplete} disabled={disabled} />
             {extraInfo && <div style={{ color: "var(--qu-text-secondary)", fontSize: "12px", marginTop: "5px" }}>{extraInfo}</div>}
         </div>
     );
@@ -249,19 +302,21 @@ export function EmailOwnedDomainInput({ label, value, setValue, type, style, aut
     const domains = useDomainsList();
     const [emailLocal, setEmailLocal] = useState(value.split("@")[0]);
     useEffect(() => {
-        setValue(emailLocal + "@" + domains.data?.find((domain: any) => domain.id === domainId)?.name);
-    }, [emailLocal, domainId, domains]);
+        const domainList = (Array.isArray(domains.data) ? domains.data : []) as any[];
+        const domain = domainList.find((domain: any) => domain.id === domainId);
+        setValue(emailLocal + (domain?.name ? "@" + domain.name : ""));
+    }, [emailLocal, domainId, domains.data, setValue]);
     return (
         <div style={{ padding: "20px 20px 0px 20px", ...style }}>
             <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>{label}</div>
-            <div className="flex flex-row gap-2">
-                <Input autoCorrect="off" autoCapitalize="off" style={{ backgroundColor: "var(--header-background)" }} value={emailLocal} onChange={(e) => setEmailLocal(e.target.value)} type={type} autoComplete={autoComplete} />
-                <Select value={domainId} onValueChange={setDomainId}>
+                    <div className="flex flex-row gap-2">
+                        <Input autoCorrect="off" autoCapitalize="off" style={{ backgroundColor: "var(--header-background)" }} value={emailLocal} onChange={(e) => setEmailLocal(e.target.value)} type={type} autoComplete={autoComplete} />
+                <Select value={domainId || ""} onValueChange={(value) => setDomainId?.(value)}>
                     <SelectTrigger style={{ backgroundColor: "var(--header-background)" }}>
                         <SelectValue placeholder="Select a domain" />
                     </SelectTrigger>
                     <SelectContent>
-                        {domains.data?.map((domain: any) => (
+                        {(Array.isArray(domains.data) ? domains.data : []).map((domain: any) => (
                             <SelectItem disabled={!domain.verified} key={domain.id} value={domain.id}>@{domain.name}</SelectItem>
                         ))}
                     </SelectContent>
@@ -360,6 +415,103 @@ export function SelectInput({ label, value, setValue, options }: { label: string
     );
 }
 
+export function NullableSelectInput({ label, value, setValue, options, placeholder, noneLabel }: { label: string, value: string, setValue: (value: string) => void, options: { id: string, name: string, description?: string }[], placeholder?: string, noneLabel?: string }) {
+    return (
+        <div style={{ padding: "20px 20px 0px 20px" }}>
+            <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>{label}</div>
+            <Select value={value || "__none__"} onValueChange={(nextValue) => setValue(nextValue === "__none__" ? "" : nextValue)}>
+                <SelectTrigger style={{ backgroundColor: "var(--header-background)", width: "100%", height: "fit-content" }}>
+                    <SelectValue placeholder={placeholder || "Select an option"} />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="__none__">{noneLabel || "None"}</SelectItem>
+                    {options.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "start" }}>
+                                <div style={{ color: "var(--qu-text)" }}>{option.name}</div>
+                                {option.description && <div style={{ color: "var(--qu-text-secondary)" }}>{option.description}</div>}
+                            </div>
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+    );
+}
+
+export function MultiSelectInput({
+    label,
+    value,
+    setValue,
+    options,
+    emptyLabel,
+}: {
+    label: string;
+    value: string[];
+    setValue: (value: string[]) => void;
+    options: { id: string, name: string, description?: string }[];
+    emptyLabel?: string;
+}) {
+    const selectedOptions = options.filter((option) => value.includes(option.id));
+    const triggerLabel = selectedOptions.length === 0
+        ? emptyLabel || "Select options"
+        : selectedOptions.map((option) => option.name).join(", ");
+    return (
+        <div style={{ padding: "20px 20px 0px 20px" }}>
+            <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>{label}</div>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-between"
+                    >
+                        <span className="truncate text-left">{triggerLabel}</span>
+                        <span className="text-xs text-muted-foreground">{value.length} selected</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[16rem]">
+                    {options.length === 0 ? (
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">{emptyLabel || "No options available"}</div>
+                    ) : options.map((option) => (
+                        <DropdownMenuCheckboxItem
+                            key={option.id}
+                            checked={value.includes(option.id)}
+                            onSelect={(event) => event.preventDefault()}
+                            onCheckedChange={(checked) => {
+                                setValue(checked ? [...value, option.id] : value.filter((item) => item !== option.id));
+                            }}
+                        >
+                            <div className="flex flex-col items-start">
+                                <span>{option.name}</span>
+                                {option.description && <span className="text-xs text-muted-foreground">{option.description}</span>}
+                            </div>
+                        </DropdownMenuCheckboxItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+    );
+}
+
+function parseTagsInput(tagsText: string) {
+    return tagsText
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+}
+
+function stringifyTagsInput(tags: string[] | undefined) {
+    return (tags || []).join(", ");
+}
+
+function sameStringArrays(left: string[], right: string[]) {
+    if (left.length !== right.length) {
+        return false;
+    }
+    return [...left].sort().join("|") === [...right].sort().join("|");
+}
+
 export function SwitchInput({ label, value, setValue }: { label: string, value: boolean, setValue: (value: boolean) => void }) {
     return (
         <div style={{ padding: "20px 20px 0px 20px" }} className="flex items-center justify-between">
@@ -374,7 +526,7 @@ export function SuffixedInput({ label, value, setValue, suffix, fitInput, patter
         <div style={{ padding: "20px 20px 0px 20px", ...style }}>
             <div style={{ fontSize: "14px", fontWeight: "500", marginBottom: "10px" }}>{label}</div>
             <div className="flex items-center border border-input rounded-md shadow-xs bg-background focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px] transition-[color,box-shadow] px-3 h-9 text-base">
-                <input autoCorrect="off" autoCapitalize="off" pattern={pattern} type="text" value={value} onChange={(e) => setValue(e.target.value)} className={"outline-none text-[14px]" + (fitInput ? "" : " w-full")} style={{ fieldSizing: "content" }} />
+                <input autoCorrect="off" autoCapitalize="off" pattern={pattern} type="text" value={value} onChange={(e) => setValue(e.target.value)} className={"outline-none text-[14px]" + (fitInput ? "" : " w-full")} />
                 <span style={{ color: "var(--qu-text-secondary)" }} className="select-none text-[14px]">{suffix}</span>
             </div>
         </div>
@@ -383,13 +535,21 @@ export function SuffixedInput({ label, value, setValue, suffix, fitInput, patter
 
 export function AddUserDrawer({ open, setOpen, usersListHook }: { open: boolean, setOpen: (open: boolean) => void, usersListHook: any }) {
     const pathname = usePathname();
+    const isAdmin = pathname.startsWith("/admin");
+    const departmentsList = useDepartmentsList();
+    const locationsList = useLocationsList();
+    const orgRolesList = useOrgRolesList();
     const [name, setName] = useState("");
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
-    const [role, setRole] = useState(pathname.startsWith("/admin") ? "" : "ADMIN");
+    const [role, setRole] = useState(isAdmin ? "" : "ADMIN");
     const session = useSession();
     const [password, setPassword] = useState("");
     const [domainId, setDomainId] = useState("");
+    const [locationId, setLocationId] = useState("");
+    const [departmentIds, setDepartmentIds] = useState<string[]>([]);
+    const [orgRoleIds, setOrgRoleIds] = useState<string[]>([]);
+    const [tagsText, setTagsText] = useState("");
     const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
     return (
         <Drawer handleOnly direction="right" open={open} onOpenChange={setOpen}>
@@ -408,13 +568,17 @@ export function AddUserDrawer({ open, setOpen, usersListHook }: { open: boolean,
                     <InputField label="Name" value={name} setValue={setName} />
                     <PrefixedInput label="Username" value={username} setValue={setUsername} prefix={session.data?.user?.tenant?.name + "/"} />
                     {/* <InputField label="Email" value={email} setValue={setEmail} /> */}
-                    {pathname.startsWith("/admin") ? <EmailOwnedDomainInput label="Email" value={email} setValue={setEmail} domainId={domainId} setDomainId={setDomainId} /> : <InputField label="Email" value={email} setValue={setEmail} />}
+                    {isAdmin ? <EmailOwnedDomainInput label="Email" value={email} setValue={setEmail} domainId={domainId} setDomainId={setDomainId} /> : <InputField label="Email" value={email} setValue={setEmail} />}
                     <InputField label="Password" value={password} setValue={setPassword} type="password" />
-                    {pathname.startsWith("/admin") ? <SelectInput label="Role" value={role} setValue={setRole} options={[
+                    {isAdmin ? <SelectInput label="Role" value={role} setValue={setRole} options={[
                         { id: "ADMIN", name: "Admin", description: "Has full access to everything in the tenant" },
                         { id: "USER", name: "User", description: "Has limited access to the tenant" },
                         { id: "SERVICE", name: "Service", description: "An application or service that can perform actions automatically" }
                     ]} /> : null}
+                    {isAdmin ? <NullableSelectInput label="Location" value={locationId} setValue={setLocationId} options={(locationsList.loaded ? locationsList.data : [])?.map((location: any) => ({ id: location.id, name: location.name })) || []} noneLabel="No location" placeholder="Select a location" /> : null}
+                    {isAdmin ? <MultiSelectInput label="Departments" value={departmentIds} setValue={setDepartmentIds} options={(departmentsList.loaded ? departmentsList.data : [])?.map((department: any) => ({ id: department.id, name: department.name })) || []} emptyLabel="No departments available" /> : null}
+                    {isAdmin ? <MultiSelectInput label="Org Roles" value={orgRoleIds} setValue={setOrgRoleIds} options={(orgRolesList.loaded ? orgRolesList.data : [])?.map((orgRole: any) => ({ id: orgRole.id, name: orgRole.name })) || []} emptyLabel="No org roles available" /> : null}
+                    {isAdmin ? <InputField label="Tags" value={tagsText} setValue={setTagsText} extraInfo="Comma separated tags" /> : null}
                 </div>}
                 {status === "loading" && <div className="drawer-mainarea">
                     <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", height: "100%", width: "100%" }}>
@@ -446,9 +610,13 @@ export function AddUserDrawer({ open, setOpen, usersListHook }: { open: boolean,
                                 username,
                                 email,
                                 role,
-                                tenantId: session.data?.user?.tenant?.id,
+                                tenantId: session.data?.user?.tenant?.id || "",
                                 password,
-                                domainId
+                                domainId,
+                                locationId: isAdmin ? locationId : undefined,
+                                departmentIds: isAdmin ? departmentIds : undefined,
+                                orgRoleIds: isAdmin ? orgRoleIds : undefined,
+                                tags: isAdmin ? parseTagsInput(tagsText) : undefined,
                             });
                             setStatus("success");
                             usersListHook.reload();

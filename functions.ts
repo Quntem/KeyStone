@@ -15,7 +15,68 @@ export function comparePassword(password: string, hashedPassword: string) {
     return bcrypt.compareSync(password, hashedPassword);
 }
 
-export async function createUser({ email, password, name, tenantId, username, role, domainId }: { email: string, password: string, name: string, tenantId?: string, username: string, role: string, domainId?: string }) {
+async function syncUserDepartments(userId: string, departmentIds: string[]) {
+    const uniqueDepartmentIds = [...new Set(departmentIds.filter(Boolean))];
+    await prisma.departmentUser.deleteMany({
+        where: {
+            userId,
+        },
+    });
+    if (uniqueDepartmentIds.length > 0) {
+        await prisma.departmentUser.createMany({
+            data: uniqueDepartmentIds.map((departmentId) => ({
+                userId,
+                departmentId,
+            })),
+        });
+    }
+}
+
+async function syncUserOrgRoles(userId: string, orgRoleIds: string[]) {
+    const uniqueOrgRoleIds = [...new Set(orgRoleIds.filter(Boolean))];
+    await prisma.orgRoleUser.deleteMany({
+        where: {
+            userId,
+        },
+    });
+    if (uniqueOrgRoleIds.length > 0) {
+        await prisma.orgRoleUser.createMany({
+            data: uniqueOrgRoleIds.map((orgRoleId) => ({
+                userId,
+                orgRoleId,
+            })),
+        });
+    }
+}
+
+export async function createUser({
+    email,
+    password,
+    name,
+    tenantId,
+    username,
+    role,
+    domainId,
+    locationId,
+    departmentIds,
+    orgRoleIds,
+    tags,
+}: {
+    email: string;
+    password: string;
+    name: string;
+    tenantId?: string;
+    username: string;
+    role: string;
+    domainId?: string;
+    locationId?: string | null;
+    departmentIds?: string[];
+    orgRoleIds?: string[];
+    tags?: string[];
+}) {
+    if (!tenantId) {
+        throw new Error("Tenant is required");
+    }
     var users = await prisma.user.findMany({
         where: {
             tenantId,
@@ -33,9 +94,17 @@ export async function createUser({ email, password, name, tenantId, username, ro
             role: role == "ADMIN" ? Role.ADMIN : role == "USER" ? Role.USER : role == "SERVICE" ? Role.SERVICE : Role.USER,
             tenantId,
             username,
-            domainId
+            domainId,
+            locationId: locationId || null,
+            tags: tags ?? [],
         },
     });
+    if (departmentIds && departmentIds.length > 0) {
+        await syncUserDepartments(user.id, departmentIds);
+    }
+    if (orgRoleIds && orgRoleIds.length > 0) {
+        await syncUserOrgRoles(user.id, orgRoleIds);
+    }
     await evaluateMagicGroupsForUser({ userId: user.id });
     return user;
 }
@@ -73,7 +142,89 @@ export async function getUserIdByEmail({ email }: { email: string }) {
     });
 }
 
-export async function updateUser({ id, name, email, username, role, domainId }: { id: string, name: string, email: string, username: string, role: string, domainId: string }) {
+export async function updateUser({
+    id,
+    tenantId,
+    name,
+    email,
+    username,
+    role,
+    domainId,
+    locationId,
+    departmentIds,
+    orgRoleIds,
+    tags,
+}: {
+    id: string;
+    tenantId?: string;
+    name: string;
+    email: string;
+    username: string;
+    role: string;
+    domainId: string;
+    locationId?: string | null;
+    departmentIds?: string[];
+    orgRoleIds?: string[];
+    tags?: string[];
+}) {
+    const existingUser = await prisma.user.findUnique({
+        where: {
+            id,
+        },
+        select: {
+            tenantId: true,
+        },
+    });
+    if (!existingUser) {
+        throw new Error("User not found");
+    }
+    if (tenantId && existingUser.tenantId !== tenantId) {
+        throw new Error("User not found");
+    }
+    if (locationId) {
+        const location = await prisma.location.findUnique({
+            where: {
+                id: locationId,
+            },
+            select: {
+                tenantId: true,
+            },
+        });
+        if (!location || location.tenantId !== existingUser.tenantId) {
+            throw new Error("Location not found");
+        }
+    }
+    if (departmentIds && departmentIds.length > 0) {
+        const departments = await prisma.department.findMany({
+            where: {
+                id: {
+                    in: [...new Set(departmentIds.filter(Boolean))],
+                },
+                tenantId: existingUser.tenantId ?? undefined,
+            },
+            select: {
+                id: true,
+            },
+        });
+        if (departments.length !== [...new Set(departmentIds.filter(Boolean))].length) {
+            throw new Error("Department not found");
+        }
+    }
+    if (orgRoleIds && orgRoleIds.length > 0) {
+        const orgRoles = await prisma.orgRole.findMany({
+            where: {
+                id: {
+                    in: [...new Set(orgRoleIds.filter(Boolean))],
+                },
+            },
+            select: {
+                id: true,
+            },
+        });
+        if (orgRoles.length !== [...new Set(orgRoleIds.filter(Boolean))].length) {
+            throw new Error("Org role not found");
+        }
+    }
     const user = await prisma.user.update({
         where: {
             id,
@@ -84,8 +235,16 @@ export async function updateUser({ id, name, email, username, role, domainId }: 
             username,
             role: role == "ADMIN" ? Role.ADMIN : role == "USER" ? Role.USER : role == "SERVICE" ? Role.SERVICE : Role.USER,
             domainId,
+            locationId: locationId === undefined ? undefined : locationId || null,
+            tags: tags ?? undefined,
         },
     });
+    if (departmentIds) {
+        await syncUserDepartments(user.id, departmentIds);
+    }
+    if (orgRoleIds) {
+        await syncUserOrgRoles(user.id, orgRoleIds);
+    }
     await evaluateMagicGroupsForUser({ userId: user.id });
     return user;
 }
@@ -262,6 +421,17 @@ export async function listUsers({ tenantId, path }: { tenantId: string, path?: s
         include: {
             manager: true,
             tenant: true,
+            location: true,
+            departments: {
+                include: {
+                    department: true,
+                },
+            },
+            orgRoles: {
+                include: {
+                    orgRole: true,
+                },
+            },
             groups: {
                 include: {
                     group: true,
@@ -288,6 +458,17 @@ export async function listTenantUsers({ tenantId }: { tenantId: string }) {
                     username: true,
                     path: true,
                     tenant: true,
+                },
+            },
+            location: true,
+            departments: {
+                include: {
+                    department: true,
+                },
+            },
+            orgRoles: {
+                include: {
+                    orgRole: true,
                 },
             },
         },
@@ -842,7 +1023,21 @@ export async function createGroup({ tenantId, name, description, groupname, crea
     });
 }
 
-export async function updateGroup({ id, name, description, groupname }: { id: string, name: string, description?: string, groupname: string }) {
+export async function updateGroup({ id, name, description, groupname, type }: { id: string, name: string, description?: string, groupname: string, type?: GroupType }) {
+    const existing = await prisma.group.findUnique({
+        where: {
+            id,
+        },
+        select: {
+            type: true,
+        },
+    });
+    if (!existing) {
+        throw new Error("Group not found");
+    }
+    if (type && type !== existing.type) {
+        throw new Error("Group type cannot be changed after creation");
+    }
     return await prisma.group.update({
         where: {
             id,
@@ -857,6 +1052,211 @@ export async function updateGroup({ id, name, description, groupname }: { id: st
 
 export async function deleteGroup({ id }: { id: string }) {
     return await prisma.group.delete({
+        where: {
+            id,
+        },
+    });
+}
+
+export async function listDepartments({ tenantId }: { tenantId: string }) {
+    return await prisma.department.findMany({
+        where: {
+            tenantId,
+        },
+        include: {
+            _count: {
+                select: {
+                    users: true,
+                },
+            },
+        },
+        orderBy: {
+            name: "asc",
+        },
+    });
+}
+
+export async function createDepartment({ tenantId, name }: { tenantId: string, name: string }) {
+    return await prisma.department.create({
+        data: {
+            tenantId,
+            name,
+        },
+    });
+}
+
+export async function updateDepartment({ id, tenantId, name }: { id: string, tenantId: string, name: string }) {
+    const department = await prisma.department.findUnique({
+        where: {
+            id,
+        },
+        select: {
+            tenantId: true,
+        },
+    });
+    if (!department || department.tenantId !== tenantId) {
+        throw new Error("Department not found");
+    }
+    return await prisma.department.update({
+        where: {
+            id,
+        },
+        data: {
+            name,
+        },
+    });
+}
+
+export async function deleteDepartment({ id, tenantId }: { id: string, tenantId: string }) {
+    const department = await prisma.department.findUnique({
+        where: {
+            id,
+        },
+        select: {
+            tenantId: true,
+        },
+    });
+    if (!department || department.tenantId !== tenantId) {
+        throw new Error("Department not found");
+    }
+    await prisma.departmentUser.deleteMany({
+        where: {
+            departmentId: id,
+        },
+    });
+    return await prisma.department.delete({
+        where: {
+            id,
+        },
+    });
+}
+
+export async function listLocations({ tenantId }: { tenantId: string }) {
+    return await prisma.location.findMany({
+        where: {
+            tenantId,
+        },
+        include: {
+            _count: {
+                select: {
+                    users: true,
+                    devices: true,
+                },
+            },
+        },
+        orderBy: {
+            name: "asc",
+        },
+    });
+}
+
+export async function createLocation({ tenantId, name }: { tenantId: string, name: string }) {
+    return await prisma.location.create({
+        data: {
+            tenantId,
+            name,
+        },
+    });
+}
+
+export async function updateLocation({ id, tenantId, name }: { id: string, tenantId: string, name: string }) {
+    const location = await prisma.location.findUnique({
+        where: {
+            id,
+        },
+        select: {
+            tenantId: true,
+        },
+    });
+    if (!location || location.tenantId !== tenantId) {
+        throw new Error("Location not found");
+    }
+    return await prisma.location.update({
+        where: {
+            id,
+        },
+        data: {
+            name,
+        },
+    });
+}
+
+export async function deleteLocation({ id, tenantId }: { id: string, tenantId: string }) {
+    const location = await prisma.location.findUnique({
+        where: {
+            id,
+        },
+        select: {
+            tenantId: true,
+        },
+    });
+    if (!location || location.tenantId !== tenantId) {
+        throw new Error("Location not found");
+    }
+    await prisma.user.updateMany({
+        where: {
+            locationId: id,
+        },
+        data: {
+            locationId: null,
+        },
+    });
+    await prisma.device.updateMany({
+        where: {
+            locationId: id,
+        },
+        data: {
+            locationId: null,
+        },
+    });
+    return await prisma.location.delete({
+        where: {
+            id,
+        },
+    });
+}
+
+export async function listOrgRoles() {
+    return await prisma.orgRole.findMany({
+        include: {
+            _count: {
+                select: {
+                    users: true,
+                },
+            },
+        },
+        orderBy: {
+            name: "asc",
+        },
+    });
+}
+
+export async function createOrgRole({ name }: { name: string }) {
+    return await prisma.orgRole.create({
+        data: {
+            name,
+        },
+    });
+}
+
+export async function updateOrgRole({ id, name }: { id: string, name: string }) {
+    return await prisma.orgRole.update({
+        where: {
+            id,
+        },
+        data: {
+            name,
+        },
+    });
+}
+
+export async function deleteOrgRole({ id }: { id: string }) {
+    await prisma.orgRoleUser.deleteMany({
+        where: {
+            orgRoleId: id,
+        },
+    });
+    return await prisma.orgRole.delete({
         where: {
             id,
         },
@@ -999,6 +1399,7 @@ export function getGroupById({ id }: { id: string }) {
             id,
         },
         include: {
+            conditions: true,
             users: {
                 include: {
                     user: {
@@ -1021,7 +1422,7 @@ export function getGroupById({ id }: { id: string }) {
     });
 }
 
-export async function addUserToGroup({ userId, groupId }: { userId: string, groupId: string }) {
+async function addUserToGroupMembership({ userId, groupId }: { userId: string, groupId: string }) {
     return await prisma.groupUser.create({
         data: {
             userId,
@@ -1049,7 +1450,7 @@ export async function addUserToGroup({ userId, groupId }: { userId: string, grou
     });
 }
 
-export async function removeUserFromGroup({ userId, groupId }: { userId: string, groupId: string }) {
+async function removeUserFromGroupMembership({ userId, groupId }: { userId: string, groupId: string }) {
     return await prisma.groupUser.delete({
         where: {
             userId_groupId: {
@@ -1058,6 +1459,36 @@ export async function removeUserFromGroup({ userId, groupId }: { userId: string,
             },
         },
     });
+}
+
+export async function addUserToGroup({ userId, groupId }: { userId: string, groupId: string }) {
+    const group = await prisma.group.findUnique({
+        where: {
+            id: groupId,
+        },
+        select: {
+            type: true,
+        },
+    });
+    if (group?.type === GroupType.Magic) {
+        throw new Error("Users cannot be manually added to magic groups");
+    }
+    return await addUserToGroupMembership({ userId, groupId });
+}
+
+export async function removeUserFromGroup({ userId, groupId }: { userId: string, groupId: string }) {
+    const group = await prisma.group.findUnique({
+        where: {
+            id: groupId,
+        },
+        select: {
+            type: true,
+        },
+    });
+    if (group?.type === GroupType.Magic) {
+        throw new Error("Users cannot be manually removed from magic groups");
+    }
+    return await removeUserFromGroupMembership({ userId, groupId });
 }
 
 export async function AddTenantToApp({ tenantId, appId }: { tenantId: string, appId: string }) {
@@ -1091,7 +1522,7 @@ export function UpgradeToFullTenant({ tenantId }: { tenantId: string }) {
     });
 }
 
-export async function createDevice({ name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName, tenantId, isSelfEnrolled, enrolledById, groups }: { name: string, hardwareType: DeviceHardwareType, softwareType: DeviceSoftwareType, os: string, osVersion: string, assignedTo: string, mdmServerId: string | null, extraInfo: any, displayName: string, tenantId: string, isSelfEnrolled: boolean, enrolledById: string, groups?: string[] }) {
+export async function createDevice({ name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName, tenantId, isSelfEnrolled, enrolledById, groups, locationId, tags }: { name: string, hardwareType: DeviceHardwareType, softwareType: DeviceSoftwareType, os: string, osVersion: string, assignedTo: string, mdmServerId: string | null, extraInfo: any, displayName: string, tenantId: string, isSelfEnrolled: boolean, enrolledById: string, groups?: string[], locationId?: string | null, tags?: string[] }) {
     if (!mdmServerId) {
         const defaultMDMServer = await prisma.mdmServer.findUnique({
             where: {
@@ -1116,14 +1547,16 @@ export async function createDevice({ name, hardwareType, softwareType, os, osVer
             softwareType,
             os,
             osVersion,
-            assignedTo: assignedTo || isSelfEnrolled ? enrolledById : null,
+            assignedTo: assignedTo || (isSelfEnrolled ? enrolledById : null),
             mdmServerId,
             extraInfo,
             isSelfEnrolled,
             enrolledById,
             lastCheckIn: new Date(),
+            locationId: locationId || null,
+            tags: tags ?? [],
             groups: {
-                create: groups.map((group: any) => ({
+                create: (groups || []).map((group: any) => ({
                     group: {
                         connect: {
                             id: group,
@@ -1235,7 +1668,7 @@ export async function createDevice({ name, hardwareType, softwareType, os, osVer
     return device;
 }
 
-export async function updateDevice({ id, name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName, lastCheckIn }: { id: string, name?: string, hardwareType?: DeviceHardwareType, softwareType?: DeviceSoftwareType, os?: string, osVersion?: string, assignedTo?: string, mdmServerId?: string, extraInfo?: any, displayName?: string, lastCheckIn?: Date }) {
+export async function updateDevice({ id, name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName, lastCheckIn, locationId, tags }: { id: string, name?: string, hardwareType?: DeviceHardwareType, softwareType?: DeviceSoftwareType, os?: string, osVersion?: string, assignedTo?: string, mdmServerId?: string, extraInfo?: any, displayName?: string, lastCheckIn?: Date, locationId?: string | null, tags?: string[] }) {
     const device = await prisma.device.findUnique({
         where: {
             id,
@@ -1273,6 +1706,19 @@ export async function updateDevice({ id, name, hardwareType, softwareType, os, o
     });
     if (!device) {
         return null;
+    }
+    if (locationId) {
+        const location = await prisma.location.findUnique({
+            where: {
+                id: locationId,
+            },
+            select: {
+                tenantId: true,
+            },
+        });
+        if (!location || location.tenantId !== device.tenantId) {
+            return null;
+        }
     }
     if (mdmServerId && device.mdmServerId !== mdmServerId) {
         const mdmServer = await prisma.mdmServer.findUnique({
@@ -1324,7 +1770,9 @@ export async function updateDevice({ id, name, hardwareType, softwareType, os, o
             assignedTo: assignedTo || null,
             mdmServerId,
             extraInfo,
-            lastCheckIn
+            lastCheckIn,
+            locationId: locationId === undefined ? undefined : locationId || null,
+            tags: tags ?? undefined,
         },
         include: {
             tenant: true,
@@ -1448,8 +1896,8 @@ export async function listDevices({ tenantId }: { tenantId: string }) {
     });
 }
 
-export async function addDeviceToGroup({ deviceId, groupId }: { deviceId: string, groupId: string }) {
-    const deviceGroup = await prisma.deviceGroup.create({
+async function addDeviceToGroupMembership({ deviceId, groupId }: { deviceId: string, groupId: string }) {
+    return await prisma.deviceGroup.create({
         data: {
             deviceId,
             groupId,
@@ -1459,6 +1907,21 @@ export async function addDeviceToGroup({ deviceId, groupId }: { deviceId: string
             device: true,
         },
     });
+}
+
+async function removeDeviceFromGroupMembership({ deviceId, groupId }: { deviceId: string, groupId: string }) {
+    return await prisma.deviceGroup.delete({
+        where: {
+            deviceId_groupId: {
+                deviceId,
+                groupId,
+            },
+        },
+    });
+}
+
+export async function addDeviceToGroup({ deviceId, groupId }: { deviceId: string, groupId: string }) {
+    const deviceGroup = await addDeviceToGroupMembership({ deviceId, groupId });
     const device = await getDeviceById({ id: deviceId });
     if (!device?.mdmServer) {
         return deviceGroup;
@@ -1480,14 +1943,7 @@ export async function addDeviceToGroup({ deviceId, groupId }: { deviceId: string
 }
 
 export async function removeDeviceFromGroup({ deviceId, groupId }: { deviceId: string, groupId: string }) {
-    const deviceGroup = await prisma.deviceGroup.delete({
-        where: {
-            deviceId_groupId: {
-                deviceId,
-                groupId,
-            },
-        },
-    });
+    const deviceGroup = await removeDeviceFromGroupMembership({ deviceId, groupId });
     const device = await getDeviceById({ id: deviceId });
     if (!device?.mdmServer) {
         return deviceGroup;
@@ -1572,9 +2028,9 @@ export async function evaluateMagicGroupsForDevice({ deviceId }: { deviceId: str
         const isMember = device.groups.some((deviceGroup) => deviceGroup.groupId === group.id);
 
         if (shouldBeMember && !isMember) {
-            await addDeviceToGroup({ deviceId, groupId: group.id });
+            await addDeviceToGroupMembership({ deviceId, groupId: group.id });
         } else if (!shouldBeMember && isMember) {
-            await removeDeviceFromGroup({ deviceId, groupId: group.id });
+            await removeDeviceFromGroupMembership({ deviceId, groupId: group.id });
         }
     }
 }
@@ -1649,9 +2105,9 @@ export async function evaluateMagicGroupsForGroup({ groupId }: { groupId: string
         const isMember = user.groups.some((userGroup) => userGroup.groupId === group.id);
 
         if (shouldBeMember && !isMember) {
-            await addUserToGroup({ userId: user.id, groupId: group.id });
+            await addUserToGroupMembership({ userId: user.id, groupId: group.id });
         } else if (!shouldBeMember && isMember) {
-            await removeUserFromGroup({ userId: user.id, groupId: group.id });
+            await removeUserFromGroupMembership({ userId: user.id, groupId: group.id });
         }
     }
 
@@ -1704,9 +2160,9 @@ export async function evaluateMagicGroupsForGroup({ groupId }: { groupId: string
         const isMember = device.groups.some((deviceGroup) => deviceGroup.groupId === group.id);
 
         if (shouldBeMember && !isMember) {
-            await addDeviceToGroup({ deviceId: device.id, groupId: group.id });
+            await addDeviceToGroupMembership({ deviceId: device.id, groupId: group.id });
         } else if (!shouldBeMember && isMember) {
-            await removeDeviceFromGroup({ deviceId: device.id, groupId: group.id });
+            await removeDeviceFromGroupMembership({ deviceId: device.id, groupId: group.id });
         }
     }
 }

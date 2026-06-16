@@ -21,7 +21,7 @@ export function useUsersList() {
                     }
                 }
             }).then((data) => {
-                setUsersList({ data: { users: data }, loaded: true, reload });
+                setUsersList({ data: { users: data } as any, loaded: true, reload });
             });
         }
     }, [usersList.loaded]);
@@ -112,13 +112,37 @@ export function useTenantsList() {
     return usersList;
 }
 
-export function createUser({ name, username, email, role, tenantId, password, domainId }: { name: string, username: string, email: string, role: string, tenantId: string, password: string, domainId: string }) {
+export function createUser({
+    name,
+    username,
+    email,
+    role,
+    tenantId,
+    password,
+    domainId,
+    locationId,
+    departmentIds,
+    orgRoleIds,
+    tags,
+}: {
+    name: string;
+    username: string;
+    email: string;
+    role: string;
+    tenantId: string;
+    password: string;
+    domainId: string;
+    locationId?: string;
+    departmentIds?: string[];
+    orgRoleIds?: string[];
+    tags?: string[];
+}) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/user", {
             credentials: "include",
             redirect: "manual",
             method: "POST",
-            body: JSON.stringify({ name, username, email, role, tenantId, password, domainId }),
+            body: JSON.stringify({ name, username, email, role, tenantId, password, domainId, locationId, departmentIds, orgRoleIds, tags }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -477,13 +501,35 @@ export function removeUserFromApp({ accessId, appId }: { accessId: string, appId
     });
 }
 
-export function updateUser({ userId, name, username, email, role, domainId }: { userId: string, name: string, username: string, email: string, role: string, domainId: string }) {
+export function updateUser({
+    userId,
+    name,
+    username,
+    email,
+    role,
+    domainId,
+    locationId,
+    departmentIds,
+    orgRoleIds,
+    tags,
+}: {
+    userId: string;
+    name: string;
+    username: string;
+    email: string;
+    role: string;
+    domainId: string;
+    locationId?: string | null;
+    departmentIds?: string[];
+    orgRoleIds?: string[];
+    tags?: string[];
+}) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/user/" + userId, {
             credentials: "include",
             redirect: "manual",
             method: "PATCH",
-            body: JSON.stringify({ name, username, email, role, domainId }),
+            body: JSON.stringify({ name, username, email, role, domainId, locationId, departmentIds, orgRoleIds, tags }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -567,13 +613,13 @@ export function updateApp({ appId, name, description, logo, mainUrl, availableFo
     });
 }
 
-export function updateDevice({ id, name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName }: { id: string, name: string, hardwareType: string, softwareType: string, os: string, osVersion: string, assignedTo: string, mdmServerId: string, extraInfo: any, displayName: string }) {
+export function updateDevice({ id, name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName, locationId, tags }: { id: string, name: string, hardwareType: string, softwareType: string, os: string, osVersion: string, assignedTo: string, mdmServerId: string, extraInfo: any, displayName: string, locationId?: string, tags?: string[] }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/device/" + id, {
             credentials: "include",
             redirect: "manual",
             method: "POST",
-            body: JSON.stringify({ name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName }),
+            body: JSON.stringify({ name, hardwareType, softwareType, os, osVersion, assignedTo, mdmServerId, extraInfo, displayName, locationId, tags }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -617,6 +663,252 @@ export function createDomain({ domain }: { domain: string }) {
                     error: {
                         text: "Failed to create domain",
                         code: "Failed to create domain",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function createDepartment({ name }: { name: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/departments", {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ name }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                return {
+                    error: {
+                        text: "Failed to create department",
+                        code: "Failed to create department",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function updateDepartment({ id, name }: { id: string, name: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/departments/" + id, {
+            credentials: "include",
+            redirect: "manual",
+            method: "PATCH",
+            body: JSON.stringify({ name }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                return {
+                    error: {
+                        text: "Failed to update department",
+                        code: "Failed to update department",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function deleteDepartment({ id }: { id: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/departments/" + id, {
+            credentials: "include",
+            redirect: "manual",
+            method: "DELETE",
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                return {
+                    error: {
+                        text: "Failed to delete department",
+                        code: "Failed to delete department",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function createLocation({ name }: { name: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/locations", {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ name }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                return {
+                    error: {
+                        text: "Failed to create location",
+                        code: "Failed to create location",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function updateLocation({ id, name }: { id: string, name: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/locations/" + id, {
+            credentials: "include",
+            redirect: "manual",
+            method: "PATCH",
+            body: JSON.stringify({ name }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                return {
+                    error: {
+                        text: "Failed to update location",
+                        code: "Failed to update location",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function deleteLocation({ id }: { id: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/locations/" + id, {
+            credentials: "include",
+            redirect: "manual",
+            method: "DELETE",
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                return {
+                    error: {
+                        text: "Failed to delete location",
+                        code: "Failed to delete location",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function createOrgRole({ name }: { name: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/orgroles", {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ name }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                return {
+                    error: {
+                        text: "Failed to create org role",
+                        code: "Failed to create org role",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function updateOrgRole({ id, name }: { id: string, name: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/orgroles/" + id, {
+            credentials: "include",
+            redirect: "manual",
+            method: "PATCH",
+            body: JSON.stringify({ name }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                return {
+                    error: {
+                        text: "Failed to update org role",
+                        code: "Failed to update org role",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function deleteOrgRole({ id }: { id: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/orgroles/" + id, {
+            credentials: "include",
+            redirect: "manual",
+            method: "DELETE",
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                return {
+                    error: {
+                        text: "Failed to delete org role",
+                        code: "Failed to delete org role",
                         status: 401,
                     }
                 }
@@ -707,13 +999,76 @@ export function useGroupsList() {
     return groupsList;
 }
 
-export function CreateGroup({ name, description, groupname }: { name: string, description: string, groupname: string }) {
+export function useDepartmentsList() {
+    const reload = () => {
+        setDepartmentsList({ data: null, loaded: false, reload });
+    };
+    const [departmentsList, setDepartmentsList] = useState({ data: null, loaded: false, reload });
+    useEffect(() => {
+        if (!departmentsList.loaded) {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/departments", { credentials: "include", redirect: "manual" }).then((res) => {
+                if (res.ok) {
+                    return res.json();
+                } else {
+                    return { error: { text: "Unauthorized", code: "Unauthorized", status: 401 } };
+                }
+            }).then((data) => {
+                setDepartmentsList({ data, loaded: true, reload });
+            });
+        }
+    }, [departmentsList.loaded]);
+    return departmentsList;
+}
+
+export function useLocationsList() {
+    const reload = () => {
+        setLocationsList({ data: null, loaded: false, reload });
+    };
+    const [locationsList, setLocationsList] = useState({ data: null, loaded: false, reload });
+    useEffect(() => {
+        if (!locationsList.loaded) {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/locations", { credentials: "include", redirect: "manual" }).then((res) => {
+                if (res.ok) {
+                    return res.json();
+                } else {
+                    return { error: { text: "Unauthorized", code: "Unauthorized", status: 401 } };
+                }
+            }).then((data) => {
+                setLocationsList({ data, loaded: true, reload });
+            });
+        }
+    }, [locationsList.loaded]);
+    return locationsList;
+}
+
+export function useOrgRolesList() {
+    const reload = () => {
+        setOrgRolesList({ data: null, loaded: false, reload });
+    };
+    const [orgRolesList, setOrgRolesList] = useState({ data: null, loaded: false, reload });
+    useEffect(() => {
+        if (!orgRolesList.loaded) {
+            fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/orgroles", { credentials: "include", redirect: "manual" }).then((res) => {
+                if (res.ok) {
+                    return res.json();
+                } else {
+                    return { error: { text: "Unauthorized", code: "Unauthorized", status: 401 } };
+                }
+            }).then((data) => {
+                setOrgRolesList({ data, loaded: true, reload });
+            });
+        }
+    }, [orgRolesList.loaded]);
+    return orgRolesList;
+}
+
+export function CreateGroup({ name, description, groupname, type }: { name: string, description: string, groupname: string, type?: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group", {
             credentials: "include",
             redirect: "manual",
             method: "POST",
-            body: JSON.stringify({ name, description, groupname }),
+            body: JSON.stringify({ name, description, groupname, type }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -737,13 +1092,13 @@ export function CreateGroup({ name, description, groupname }: { name: string, de
     });
 }
 
-export function updateGroup({ groupId, name, description, groupname }: { groupId: string, name: string, description: string, groupname: string }) {
+export function updateGroup({ groupId, name, description, groupname, type }: { groupId: string, name: string, description: string, groupname: string, type?: string }) {
     return new Promise((resolve, reject) => {
         fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId, {
             credentials: "include",
             redirect: "manual",
             method: "PATCH",
-            body: JSON.stringify({ name, description, groupname }),
+            body: JSON.stringify({ name, description, groupname, type }),
             headers: {
                 "Content-Type": "application/json",
                 "accept": "application/json",
@@ -757,6 +1112,188 @@ export function updateGroup({ groupId, name, description, groupname }: { groupId
                     error: {
                         text: "Failed to update group",
                         code: "Failed to update group",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function getGroupById({ groupId }: { groupId: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId, {
+            credentials: "include",
+            redirect: "manual",
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to load group",
+                        code: "Failed to load group",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function recalculateMagicGroup({ groupId }: { groupId: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId + "/recalculate", {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to recalculate magic group",
+                        code: "Failed to recalculate magic group",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function listMagicGroupConditions({ groupId }: { groupId: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId + "/conditions", {
+            credentials: "include",
+            redirect: "manual",
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to load magic group conditions",
+                        code: "Failed to load magic group conditions",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function createMagicGroupCondition({
+    groupId,
+    targetType,
+    attribute,
+    operator,
+    value,
+}: {
+    groupId: string;
+    targetType: string;
+    attribute: string;
+    operator: string;
+    value: string;
+}) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/" + groupId + "/conditions", {
+            credentials: "include",
+            redirect: "manual",
+            method: "POST",
+            body: JSON.stringify({ targetType, attribute, operator, value }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to create magic group condition",
+                        code: "Failed to create magic group condition",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function updateMagicGroupCondition({
+    conditionId,
+    targetType,
+    attribute,
+    operator,
+    value,
+}: {
+    conditionId: string;
+    targetType?: string;
+    attribute?: string;
+    operator?: string;
+    value?: string;
+}) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/conditions/" + conditionId, {
+            credentials: "include",
+            redirect: "manual",
+            method: "PATCH",
+            body: JSON.stringify({ targetType, attribute, operator, value }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            }
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to update magic group condition",
+                        code: "Failed to update magic group condition",
+                        status: 401,
+                    }
+                }
+            }
+        }).then((data) => {
+            resolve(data);
+        });
+    });
+}
+
+export function deleteMagicGroupCondition({ conditionId }: { conditionId: string }) {
+    return new Promise((resolve, reject) => {
+        fetch(process.env.NEXT_PUBLIC_API_URL + "/admin/group/conditions/" + conditionId, {
+            credentials: "include",
+            redirect: "manual",
+            method: "DELETE",
+        }).then((res) => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                console.log("unauthorized");
+                return {
+                    error: {
+                        text: "Failed to delete magic group condition",
+                        code: "Failed to delete magic group condition",
                         status: 401,
                     }
                 }
