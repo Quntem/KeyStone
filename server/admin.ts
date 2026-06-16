@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 var router = express.Router();
 
-import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, setTenantGroupCreationPermition, listDevices, createDevice, updateDevice, deleteDevice, addDeviceToGroup, updateMDMServer, deleteMDMServer, listMDMServers, createMDMServer, getDeviceById, getDeviceByDeviceName, removeDeviceFromGroup, getMdmServerById } from "../functions.ts";
+import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, setTenantGroupCreationPermition, listDevices, createDevice, updateDevice, deleteDevice, addDeviceToGroup, updateMDMServer, deleteMDMServer, listMDMServers, createMDMServer, getDeviceById, getDeviceByDeviceName, removeDeviceFromGroup, getMdmServerById, listMagicGroupConditions, createMagicGroupCondition, updateMagicGroupCondition, deleteMagicGroupCondition } from "../functions.ts";
 import { requireAuth, requireRole } from "../webfunctions.ts";
 
 router.use(express.json());
@@ -316,6 +316,15 @@ router.get("/group/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRol
     }
 });
 
+router.get("/group/:id/conditions", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        const conditions = await listMagicGroupConditions({ groupId: req.params.id });
+        res.json(conditions);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
 router.post("/group", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
         var group = await createGroup({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), createdBy: req.auth.id, adminCreated: true, type: req.body.type || "Organizational" });
@@ -356,6 +365,21 @@ router.post("/group/:id/user", requireAuth({ redirectTo: "/auth/signin" }), requ
     }
 });
 
+router.post("/group/:id/conditions", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        const condition = await createMagicGroupCondition({
+            groupId: req.params.id,
+            targetType: req.body.targetType,
+            attribute: req.body.attribute,
+            operator: req.body.operator,
+            value: req.body.value,
+        });
+        res.json(condition);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
 router.post("/group/:id/device", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
         var groupDevice = await addDeviceToGroup({ deviceId: req.body.deviceId, groupId: req.params.id });
@@ -372,6 +396,30 @@ router.delete("/group/:id/user", requireAuth({ redirectTo: "/auth/signin" }), re
         res.json(groupUser);
     } catch (e) {
         //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.patch("/group/conditions/:conditionId", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        const condition = await updateMagicGroupCondition({
+            id: req.params.conditionId,
+            targetType: req.body.targetType,
+            attribute: req.body.attribute,
+            operator: req.body.operator,
+            value: req.body.value,
+        });
+        res.json(condition);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.delete("/group/conditions/:conditionId", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        const condition = await deleteMagicGroupCondition({ id: req.params.conditionId });
+        res.json(condition);
+    } catch (e) {
         res.status(400).json({ error: e.message });
     }
 });

@@ -1,4 +1,4 @@
-import { DeviceHardwareType, DeviceSoftwareType, GroupType, PrismaClient, Role, TenantType } from "./generated/prisma/index.js";
+import { DeviceHardwareType, DeviceSoftwareType, GroupType, MagicGroupConditionAttributeType, MagicGroupConditionOperatorType, MagicGroupConditionTargetType, PrismaClient, Role, TenantType } from "./generated/prisma/index.js";
 import * as bcrypt from "bcrypt";
 import * as dns from "dns/promises";
 
@@ -25,7 +25,7 @@ export async function createUser({ email, password, name, tenantId, username, ro
     if (users.length > 0) {
         throw new Error("User already exists");
     }
-    return await prisma.user.create({
+    const user = await prisma.user.create({
         data: {
             email,
             password: hashPassword(password),
@@ -36,6 +36,8 @@ export async function createUser({ email, password, name, tenantId, username, ro
             domainId
         },
     });
+    await evaluateMagicGroupsForUser({ userId: user.id });
+    return user;
 }
 
 export function SetUserPassword({ userId, password }: { userId: string, password: string }) {
@@ -72,7 +74,7 @@ export async function getUserIdByEmail({ email }: { email: string }) {
 }
 
 export async function updateUser({ id, name, email, username, role, domainId }: { id: string, name: string, email: string, username: string, role: string, domainId: string }) {
-    return await prisma.user.update({
+    const user = await prisma.user.update({
         where: {
             id,
         },
@@ -84,6 +86,8 @@ export async function updateUser({ id, name, email, username, role, domainId }: 
             domainId,
         },
     });
+    await evaluateMagicGroupsForUser({ userId: user.id });
+    return user;
 }
 
 export async function getTenantByName({ name }: { name: string }) {
@@ -196,6 +200,17 @@ export async function getUserById({ id }: { id: string }) {
                     tenant: true,
                 },
             },
+            departments: {
+                include: {
+                    department: true,
+                },
+            },
+            orgRoles: {
+                include: {
+                    orgRole: true,
+                },
+            },
+            location: true,
             groups: {
                 include: {
                     group: true,
@@ -534,6 +549,7 @@ export async function setUserDisabled({ id, disabled }: { id: string, disabled: 
             await deleteSession({ sessionId: session.id });
         }
     }
+    await evaluateMagicGroupsForUser({ userId: user.id });
     return user;
 }
 
@@ -788,6 +804,7 @@ export async function listGroups({ tenantId }: { tenantId: string }) {
             tenantId,
         },
         include: {
+            conditions: true,
             users: {
                 include: {
                     user: {
@@ -844,6 +861,136 @@ export async function deleteGroup({ id }: { id: string }) {
             id,
         },
     });
+}
+
+export async function listMagicGroupConditions({ groupId }: { groupId: string }) {
+    return await prisma.magicGroupCondition.findMany({
+        where: {
+            groupId,
+        },
+        orderBy: {
+            id: "asc",
+        },
+    });
+}
+
+export async function createMagicGroupCondition({
+    groupId,
+    targetType,
+    attribute,
+    operator,
+    value,
+}: {
+    groupId: string;
+    targetType: MagicGroupConditionTargetType;
+    attribute: MagicGroupConditionAttributeType;
+    operator: MagicGroupConditionOperatorType;
+    value: string;
+}) {
+    const group = await prisma.group.findUnique({
+        where: {
+            id: groupId,
+        },
+        select: {
+            id: true,
+            type: true,
+        },
+    });
+    if (!group) {
+        throw new Error("Group not found");
+    }
+    if (group.type !== GroupType.Magic) {
+        throw new Error("Magic group conditions can only be added to magic groups");
+    }
+    const condition = await prisma.magicGroupCondition.create({
+        data: {
+            groupId,
+            targetType,
+            attribute,
+            operator,
+            value,
+        },
+    });
+    await evaluateMagicGroupsForGroup({ groupId });
+    return condition;
+}
+
+export async function updateMagicGroupCondition({
+    id,
+    targetType,
+    attribute,
+    operator,
+    value,
+}: {
+    id: string;
+    targetType?: MagicGroupConditionTargetType;
+    attribute?: MagicGroupConditionAttributeType;
+    operator?: MagicGroupConditionOperatorType;
+    value?: string;
+}) {
+    const existing = await prisma.magicGroupCondition.findUnique({
+        where: {
+            id,
+        },
+        select: {
+            id: true,
+            groupId: true,
+            group: {
+                select: {
+                    type: true,
+                },
+            },
+        },
+    });
+    if (!existing) {
+        throw new Error("Magic group condition not found");
+    }
+    if (existing.group.type !== GroupType.Magic) {
+        throw new Error("Magic group conditions can only be updated on magic groups");
+    }
+    const condition = await prisma.magicGroupCondition.update({
+        where: {
+            id,
+        },
+        data: {
+            targetType,
+            attribute,
+            operator,
+            value,
+        },
+    });
+    await evaluateMagicGroupsForGroup({ groupId: existing.groupId });
+    return condition;
+}
+
+export async function deleteMagicGroupCondition({ id }: { id: string }) {
+    const existing = await prisma.magicGroupCondition.findUnique({
+        where: {
+            id,
+        },
+        select: {
+            id: true,
+            groupId: true,
+            group: {
+                select: {
+                    type: true,
+                },
+            },
+        },
+    });
+    if (!existing) {
+        throw new Error("Magic group condition not found");
+    }
+    if (existing.group.type !== GroupType.Magic) {
+        throw new Error("Magic group conditions can only be deleted from magic groups");
+    }
+    const condition = await prisma.magicGroupCondition.delete({
+        where: {
+            id,
+        },
+    });
+    await evaluateMagicGroupsForGroup({ groupId: existing.groupId });
+    return condition;
 }
 
 export function getGroupById({ id }: { id: string }) {
@@ -993,6 +1140,7 @@ export async function createDevice({ name, hardwareType, softwareType, os, osVer
                 },
             },
             mdmServer: true,
+            location: true,
             user: {
                 select: {
                     id: true,
@@ -1000,6 +1148,17 @@ export async function createDevice({ name, hardwareType, softwareType, os, osVer
                     name: true,
                     email: true,
                     role: true,
+                    departments: {
+                        include: {
+                            department: true,
+                        },
+                    },
+                    orgRoles: {
+                        include: {
+                            orgRole: true,
+                        },
+                    },
+                    location: true,
                 },
             },
         },
@@ -1019,6 +1178,7 @@ export async function createDevice({ name, hardwareType, softwareType, os, osVer
                     mdmServerId: null,
                 },
             });
+            await evaluateMagicGroupsForDevice({ deviceId: device.id });
             return device;
         }
         const response = await fetch(mdmServer.url + "/api/v1/keystone/webhook/device", {
@@ -1034,7 +1194,7 @@ export async function createDevice({ name, hardwareType, softwareType, os, osVer
                 "device": device,
             }),
         });
-        const responseData = await response.json();
+        const responseData: any = await response.json();
         if (!response.ok) {
             console.log("Failed to enroll device in MDM");
             await deleteDevice({ id: device.id });
@@ -1055,6 +1215,7 @@ export async function createDevice({ name, hardwareType, softwareType, os, osVer
                         },
                     },
                     mdmServer: true,
+                    location: true,
                     user: {
                         select: {
                             id: true,
@@ -1066,9 +1227,11 @@ export async function createDevice({ name, hardwareType, softwareType, os, osVer
                     },
                 },
             });
+            await evaluateMagicGroupsForDevice({ deviceId: updatedDevice.id });
             return updatedDevice;
         }
     }
+    await evaluateMagicGroupsForDevice({ deviceId: device.id });
     return device;
 }
 
@@ -1085,6 +1248,7 @@ export async function updateDevice({ id, name, hardwareType, softwareType, os, o
                 },
             },
             mdmServer: true,
+            location: true,
             user: {
                 select: {
                     id: true,
@@ -1092,6 +1256,17 @@ export async function updateDevice({ id, name, hardwareType, softwareType, os, o
                     name: true,
                     email: true,
                     role: true,
+                    departments: {
+                        include: {
+                            department: true,
+                        },
+                    },
+                    orgRoles: {
+                        include: {
+                            orgRole: true,
+                        },
+                    },
+                    location: true,
                 },
             },
         },
@@ -1183,8 +1358,9 @@ export async function updateDevice({ id, name, hardwareType, softwareType, os, o
                 "tenantId": device.tenantId,
                 "device": updatedDevice,
             }),
-        });
+            });
     }
+    await evaluateMagicGroupsForDevice({ deviceId: updatedDevice.id });
     return updatedDevice;
 }
 
@@ -1208,6 +1384,7 @@ export async function getDeviceById({ id }: { id: string }) {
                 },
             },
             mdmServer: true,
+            location: true,
             tenant: true,
             user: {
                 select: {
@@ -1216,6 +1393,17 @@ export async function getDeviceById({ id }: { id: string }) {
                     name: true,
                     email: true,
                     role: true,
+                    departments: {
+                        include: {
+                            department: true,
+                        },
+                    },
+                    orgRoles: {
+                        include: {
+                            orgRole: true,
+                        },
+                    },
+                    location: true,
                 },
             },
         },
@@ -1234,6 +1422,7 @@ export async function listDevices({ tenantId }: { tenantId: string }) {
                 },
             },
             mdmServer: true,
+            location: true,
             tenant: true,
             user: {
                 select: {
@@ -1242,6 +1431,17 @@ export async function listDevices({ tenantId }: { tenantId: string }) {
                     name: true,
                     email: true,
                     role: true,
+                    departments: {
+                        include: {
+                            department: true,
+                        },
+                    },
+                    orgRoles: {
+                        include: {
+                            orgRole: true,
+                        },
+                    },
+                    location: true,
                 },
             },
         },
@@ -1306,6 +1506,209 @@ export async function removeDeviceFromGroup({ deviceId, groupId }: { deviceId: s
         }),
     });
     return deviceGroup;
+}
+
+function matchesMagicGroupConditionForDevice(device: Awaited<ReturnType<typeof getDeviceById>>, condition: {
+    attribute: MagicGroupConditionAttributeType;
+    operator: MagicGroupConditionOperatorType;
+    value: string;
+}) {
+    if (!device) {
+        return false;
+    }
+
+    const expectedValue = normalizeMagicGroupValue(condition.value);
+
+    switch (condition.attribute) {
+        case MagicGroupConditionAttributeType.Departments:
+            return matchesMagicGroupStringList(
+                device.user?.departments?.map((department) => normalizeMagicGroupValue(department.department.name)) ?? [],
+                expectedValue,
+                condition.operator,
+            );
+        case MagicGroupConditionAttributeType.Tags:
+            return matchesMagicGroupStringList(
+                device.tags?.map((tag) => normalizeMagicGroupValue(tag)) ?? [],
+                expectedValue,
+                condition.operator,
+            );
+        case MagicGroupConditionAttributeType.Location:
+            return matchesMagicGroupString(
+                normalizeMagicGroupValue(device.location?.name),
+                expectedValue,
+                condition.operator,
+            );
+        default:
+            return false;
+    }
+}
+
+export async function evaluateMagicGroupsForDevice({ deviceId }: { deviceId: string }) {
+    const device = await getDeviceById({ id: deviceId });
+    if (!device) {
+        return;
+    }
+
+    const groups = await prisma.group.findMany({
+        where: {
+            type: GroupType.Magic,
+        },
+        include: {
+            conditions: true,
+        },
+    });
+
+    for (const group of groups) {
+        const relevantConditions = group.conditions.filter(
+            (condition) =>
+                condition.targetType === MagicGroupConditionTargetType.Device ||
+                condition.targetType === MagicGroupConditionTargetType.Both,
+        );
+        const shouldBeMember =
+            group.includeAll === MagicGroupConditionTargetType.Device ||
+            group.includeAll === MagicGroupConditionTargetType.Both ||
+            (relevantConditions.length > 0 &&
+                relevantConditions.every((condition) => matchesMagicGroupConditionForDevice(device, condition)));
+        const isMember = device.groups.some((deviceGroup) => deviceGroup.groupId === group.id);
+
+        if (shouldBeMember && !isMember) {
+            await addDeviceToGroup({ deviceId, groupId: group.id });
+        } else if (!shouldBeMember && isMember) {
+            await removeDeviceFromGroup({ deviceId, groupId: group.id });
+        }
+    }
+}
+
+export async function evaluateMagicGroupsForGroup({ groupId }: { groupId: string }) {
+    const group = await prisma.group.findUnique({
+        where: {
+            id: groupId,
+        },
+        include: {
+            tenant: true,
+            conditions: true,
+        },
+    });
+
+    if (!group || group.type !== GroupType.Magic) {
+        return;
+    }
+
+    const userTargets = await prisma.user.findMany({
+        where: {
+            tenantId: group.tenantId,
+        },
+        include: {
+            tenant: true,
+            manager: {
+                select: {
+                    id: true,
+                    username: true,
+                    path: true,
+                    tenant: true,
+                },
+            },
+            departments: {
+                include: {
+                    department: true,
+                },
+            },
+            orgRoles: {
+                include: {
+                    orgRole: true,
+                },
+            },
+            location: true,
+            groups: {
+                include: {
+                    group: true,
+                },
+            },
+            devices: {
+                include: {
+                    mdmServer: true,
+                },
+            },
+        },
+        omit: {
+            password: true,
+        },
+    });
+
+    const userConditions = group.conditions.filter(
+        (condition) =>
+            condition.targetType === MagicGroupConditionTargetType.User ||
+            condition.targetType === MagicGroupConditionTargetType.Both,
+    );
+    for (const user of userTargets) {
+        const shouldBeMember =
+            group.includeAll === MagicGroupConditionTargetType.User ||
+            group.includeAll === MagicGroupConditionTargetType.Both ||
+            (userConditions.length > 0 &&
+                userConditions.every((condition) => matchesMagicGroupCondition(user as Awaited<ReturnType<typeof getUserById>>, condition)));
+        const isMember = user.groups.some((userGroup) => userGroup.groupId === group.id);
+
+        if (shouldBeMember && !isMember) {
+            await addUserToGroup({ userId: user.id, groupId: group.id });
+        } else if (!shouldBeMember && isMember) {
+            await removeUserFromGroup({ userId: user.id, groupId: group.id });
+        }
+    }
+
+    const deviceTargets = await prisma.device.findMany({
+        where: {
+            tenantId: group.tenantId,
+        },
+        include: {
+            groups: {
+                include: {
+                    group: true,
+                },
+            },
+            mdmServer: true,
+            tenant: true,
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                    departments: {
+                        include: {
+                            department: true,
+                        },
+                    },
+                    orgRoles: {
+                        include: {
+                            orgRole: true,
+                        },
+                    },
+                    location: true,
+                },
+            },
+        },
+    });
+
+    const deviceConditions = group.conditions.filter(
+        (condition) =>
+            condition.targetType === MagicGroupConditionTargetType.Device ||
+            condition.targetType === MagicGroupConditionTargetType.Both,
+    );
+    for (const device of deviceTargets) {
+        const shouldBeMember =
+            group.includeAll === MagicGroupConditionTargetType.Device ||
+            group.includeAll === MagicGroupConditionTargetType.Both ||
+            (deviceConditions.length > 0 &&
+                deviceConditions.every((condition) => matchesMagicGroupConditionForDevice(device as Awaited<ReturnType<typeof getDeviceById>>, condition)));
+        const isMember = device.groups.some((deviceGroup) => deviceGroup.groupId === group.id);
+
+        if (shouldBeMember && !isMember) {
+            await addDeviceToGroup({ deviceId: device.id, groupId: group.id });
+        } else if (!shouldBeMember && isMember) {
+            await removeDeviceFromGroup({ deviceId: device.id, groupId: group.id });
+        }
+    }
 }
 
 export async function createMDMServer({ name, tenantId, url, enrollmentToken, isDefault }: { name: string, tenantId: string, url: string, enrollmentToken: string, isDefault: boolean }) {
@@ -1391,4 +1794,163 @@ export async function getMdmServerById({ id }: { id: string }) {
             id,
         },
     });
+}
+
+function normalizeMagicGroupValue(value: unknown) {
+    if (value === null || value === undefined) {
+        return "";
+    }
+    return String(value).trim();
+}
+
+function parseMagicGroupStatus(value: string) {
+    const normalizedValue = value.trim().toLowerCase();
+    if (["active", "enabled", "true", "1"].includes(normalizedValue)) {
+        return true;
+    }
+    if (["inactive", "disabled", "false", "0"].includes(normalizedValue)) {
+        return false;
+    }
+    return null;
+}
+
+function matchesMagicGroupString(
+    actual: string,
+    expected: string,
+    operator: MagicGroupConditionOperatorType,
+) {
+    switch (operator) {
+        case MagicGroupConditionOperatorType.Equals:
+            return actual === expected;
+        case MagicGroupConditionOperatorType.NotEquals:
+            return actual !== expected;
+        case MagicGroupConditionOperatorType.Contains:
+            return actual.includes(expected);
+        case MagicGroupConditionOperatorType.NotContains:
+            return !actual.includes(expected);
+        case MagicGroupConditionOperatorType.StartsWith:
+            return actual.startsWith(expected);
+        case MagicGroupConditionOperatorType.EndsWith:
+            return actual.endsWith(expected);
+        case MagicGroupConditionOperatorType.Includes:
+            return actual.includes(expected);
+        default:
+            return false;
+    }
+}
+
+function matchesMagicGroupStringList(
+    actualValues: string[],
+    expected: string,
+    operator: MagicGroupConditionOperatorType,
+) {
+    switch (operator) {
+        case MagicGroupConditionOperatorType.Equals:
+            return actualValues.some((value) => value === expected);
+        case MagicGroupConditionOperatorType.NotEquals:
+            return !actualValues.some((value) => value === expected);
+        case MagicGroupConditionOperatorType.Contains:
+            return actualValues.some((value) => value.includes(expected));
+        case MagicGroupConditionOperatorType.NotContains:
+            return !actualValues.some((value) => value.includes(expected));
+        case MagicGroupConditionOperatorType.StartsWith:
+            return actualValues.some((value) => value.startsWith(expected));
+        case MagicGroupConditionOperatorType.EndsWith:
+            return actualValues.some((value) => value.endsWith(expected));
+        case MagicGroupConditionOperatorType.Includes:
+            return actualValues.some((value) => value === expected);
+        default:
+            return false;
+    }
+}
+
+function matchesMagicGroupCondition(user: Awaited<ReturnType<typeof getUserById>>, condition: {
+    attribute: MagicGroupConditionAttributeType;
+    operator: MagicGroupConditionOperatorType;
+    value: string;
+}) {
+    if (!user) {
+        return false;
+    }
+
+    const expectedValue = normalizeMagicGroupValue(condition.value);
+
+    switch (condition.attribute) {
+        case MagicGroupConditionAttributeType.Email:
+            return matchesMagicGroupString(
+                normalizeMagicGroupValue(user.email).toLowerCase(),
+                expectedValue.toLowerCase(),
+                condition.operator,
+            );
+        case MagicGroupConditionAttributeType.Departments:
+            return matchesMagicGroupStringList(
+                user.departments?.map((department) => normalizeMagicGroupValue(department.department.name)) ?? [],
+                expectedValue,
+                condition.operator,
+            );
+        case MagicGroupConditionAttributeType.Tags:
+            return matchesMagicGroupStringList(
+                user.tags?.map((tag) => normalizeMagicGroupValue(tag)) ?? [],
+                expectedValue,
+                condition.operator,
+            );
+        case MagicGroupConditionAttributeType.OrgRole:
+            return matchesMagicGroupStringList(
+                user.orgRoles?.map((orgRole) => normalizeMagicGroupValue(orgRole.orgRole.name)) ?? [],
+                expectedValue,
+                condition.operator,
+            );
+        case MagicGroupConditionAttributeType.Status: {
+            const actualStatus = user.disabled ? "disabled" : "active";
+            const expectedStatus = parseMagicGroupStatus(expectedValue);
+            if (expectedStatus === null) {
+                return false;
+            }
+            const expectedStatusText = expectedStatus ? "active" : "disabled";
+            return matchesMagicGroupString(actualStatus, expectedStatusText, condition.operator);
+        }
+        case MagicGroupConditionAttributeType.Location:
+            return matchesMagicGroupString(
+                normalizeMagicGroupValue(user.location?.name),
+                expectedValue,
+                condition.operator,
+            );
+        default:
+            return false;
+    }
+}
+
+export async function evaluateMagicGroupsForUser({ userId }: { userId: string }) {
+    const user = await getUserById({id: userId})
+    if (!user) {
+        return;
+    }
+
+    const groups = await prisma.group.findMany({
+        where: {
+            type: GroupType.Magic,
+        },
+        include: {
+            conditions: true,
+        }
+    })
+    for (const group of groups) {
+        const relevantConditions = group.conditions.filter(
+            (condition) =>
+                condition.targetType === MagicGroupConditionTargetType.User ||
+                condition.targetType === MagicGroupConditionTargetType.Both,
+        );
+        const shouldBeMember =
+            group.includeAll === MagicGroupConditionTargetType.User ||
+            group.includeAll === MagicGroupConditionTargetType.Both ||
+            (relevantConditions.length > 0 &&
+                relevantConditions.every((condition) => matchesMagicGroupCondition(user, condition)));
+        const isMember = user.groups.some((userGroup) => userGroup.groupId === group.id);
+
+        if (shouldBeMember && !isMember) {
+            await addUserToGroup({ userId, groupId: group.id });
+        } else if (!shouldBeMember && isMember) {
+            await removeUserFromGroup({ userId, groupId: group.id });
+        }
+    }
 }

@@ -110,7 +110,7 @@ model group {
   adminCreated Boolean       @default(false)
   devices      DeviceGroup[]
   conditions   MagicGroupCondition[]
-  includeAll   Boolean       @default(false)
+  includeAll   MagicGroupConditionTargetType?
   appAccess    GroupAppAccess[]
 
   @@unique([tenantId, groupname])
@@ -135,6 +135,7 @@ model MagicGroupCondition {
 enum MagicGroupConditionTargetType {
   User
   Device
+  Both
 }
 
 enum MagicGroupConditionAttributeType {
