@@ -42,7 +42,12 @@ model User {
   domain          domain?         @relation(fields: [domainId], references: [id], name: "domainUsers")
   devices         Device[]
   enrolledDevices Device[]        @relation(name: "EnrolledDevices")
-
+  departments     DepartmentUser[]
+  locationId      String?
+  location        location?       @relation(fields: [locationId], references: [id])
+  orgRoles        OrgRoleUser[]
+  extraInfo       Json?
+  tags            String[]
   @@unique([tenantId, username])
 }
 
@@ -71,6 +76,22 @@ model tenant {
   allowGroupCreation Boolean             @default(false)
   mdmServers         MdmServer[]
   devices            Device[]
+  departments        department[]
+  locations          location[]
+}
+
+model OrgRoleUser {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+  orgRoleId String
+  orgRole   OrgRole @relation(fields: [orgRoleId], references: [id])
+}
+
+model OrgRole {
+  id    String  @id @default(cuid())
+  name  String
+  users OrgRoleUser[]
 }
 
 model group {
@@ -88,6 +109,9 @@ model group {
   createdBy    String?
   adminCreated Boolean       @default(false)
   devices      DeviceGroup[]
+  conditions   MagicGroupCondition[]
+  includeAll   Boolean       @default(false)
+  appAccess    GroupAppAccess[]
 
   @@unique([tenantId, groupname])
 }
@@ -95,6 +119,66 @@ model group {
 enum GroupType {
   Organizational
   Functional
+  Magic
+}
+
+model MagicGroupCondition {
+  id        String @id @default(cuid())
+  groupId   String
+  group     group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  targetType MagicGroupConditionTargetType
+  attribute MagicGroupConditionAttributeType
+  operator  MagicGroupConditionOperatorType
+  value     String
+}
+
+enum MagicGroupConditionTargetType {
+  User
+  Device
+}
+
+enum MagicGroupConditionAttributeType {
+  Email
+  Departments
+  Tags
+  OrgRole
+  Status
+  Location
+}
+
+enum MagicGroupConditionOperatorType {
+  Equals
+  NotEquals
+  Contains
+  NotContains
+  StartsWith
+  EndsWith
+  Includes
+}
+
+model DepartmentUser {
+  id        String @id @default(cuid())
+  userId    String
+  user      User   @relation(fields: [userId], references: [id])
+  departmentId String
+  department department @relation(fields: [departmentId], references: [id])
+}
+
+model department {
+  id        String @id @default(cuid())
+  name      String
+  tenantId  String
+  users     DepartmentUser[]
+  tenant    tenant @relation(fields: [tenantId], references: [id])
+}
+
+model location {
+  id        String @id @default(cuid())
+  name      String
+  tenantId  String
+  users     User[]
+  tenant    tenant @relation(fields: [tenantId], references: [id])
+  devices   Device[]
 }
 
 model groupUser {
@@ -126,6 +210,7 @@ model app {
   allowedURLs          String[]
   tenant               tenant              @relation(fields: [tenantId], references: [id])
   userAppAccess        userAppAccess[]
+  groupAppAccess       GroupAppAccess[]
   mainUrl              String
   availableForExternal Boolean             @default(false)
   inExternalTenants    ExternalAppAccess[]
@@ -157,12 +242,27 @@ model userAppAccess {
   @@unique([userId, appId])
 }
 
+model GroupAppAccess {
+  id        String @id @default(cuid())
+  groupId   String
+  group     group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  appId     String
+  app       app    @relation(fields: [appId], references: [id])
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  appSessions userAppSession[]
+
+  @@unique([groupId, appId])
+}
+
 model userAppSession {
   id              String        @id @default(cuid())
   expiresAt       DateTime?
   createdAt       DateTime      @default(now())
-  userAppAccessId String
-  userAppAccess   userAppAccess @relation(fields: [userAppAccessId], references: [id], onDelete: Cascade)
+  userAppAccessId String?
+  userAppAccess   userAppAccess? @relation(fields: [userAppAccessId], references: [id], onDelete: Cascade)
+  groupAppAccessId String?
+  groupAppAccess  GroupAppAccess? @relation(fields: [groupAppAccessId], references: [id], onDelete: Cascade)
   sessionId       String
   session         session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
@@ -233,6 +333,9 @@ model Device {
   enrolledBy     User?              @relation(fields: [enrolledById], references: [id], name: "EnrolledDevices")
   enrolledAt     DateTime           @default(now())
   serialNumber   String?
+  locationId     String?
+  location       location?          @relation(fields: [locationId], references: [id])
+  tags           String[]
 
   @@unique([tenantId, serialNumber])
 }
