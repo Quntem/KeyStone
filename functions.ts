@@ -636,6 +636,40 @@ export async function listTenantUsers({ tenantId }: { tenantId: string }) {
     });
 }
 
+const searchableResourceKeys = new Set(["password", "secret", "token", "enrollmentToken"]);
+
+function resourceContainsQuery(resource: unknown, query: string, key?: string): boolean {
+    if (key && searchableResourceKeys.has(key)) {
+        return false;
+    }
+    if (typeof resource === "string") {
+        return resource.toLocaleLowerCase().includes(query);
+    }
+    if (Array.isArray(resource)) {
+        return resource.some((value) => resourceContainsQuery(value, query));
+    }
+    if (resource && typeof resource === "object") {
+        return Object.entries(resource).some(([childKey, value]) => resourceContainsQuery(value, query, childKey));
+    }
+    return false;
+}
+
+export function searchResourceCollections(resources: Record<string, unknown[]>, query: string) {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+    const results = Object.fromEntries(
+        Object.entries(resources)
+            .filter(([resourceType]) => resourceType !== "orgroles")
+            .map(([resourceType, resourceList]) => [
+                resourceType,
+                resourceList.filter((resource) => resourceContainsQuery(resource, normalizedQuery)),
+            ]),
+    ) as Record<string, unknown[]>;
+    if ("orgRoles" in results) {
+        results.orgroles = results.orgRoles;
+    }
+    return results;
+}
+
 export async function getTenantById({ id }: { id: string }) {
     return await prisma.tenant.findUnique({
         where: {

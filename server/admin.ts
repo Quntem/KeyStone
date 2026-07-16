@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 var router = express.Router();
 
-import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, grantGroupAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, getTenantById, setTenantGroupCreationPermition, listDevices, createDevice, updateDevice, deleteDevice, addDeviceToGroup, updateMDMServer, deleteMDMServer, listMDMServers, createMDMServer, getDeviceById, getDeviceByDeviceName, removeDeviceFromGroup, getMdmServerById, listMagicGroupConditions, createMagicGroupCondition, updateMagicGroupCondition, deleteMagicGroupCondition, listDepartments, listLocations, listOrgRoles, createDepartment, updateDepartment, deleteDepartment, createLocation, updateLocation, deleteLocation, createOrgRole, updateOrgRole, deleteOrgRole, getDepartmentById, getLocationById, getOrgRoleById, evaluateMagicGroupsForUser, evaluateMagicGroupsForGroup, revokeGroupAppAccess, getGroupAppAccessByGroupIdAndAppId, getGroupAppAccess } from "../functions.ts";
+import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, grantGroupAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, getTenantById, setTenantGroupCreationPermition, listDevices, createDevice, updateDevice, deleteDevice, addDeviceToGroup, updateMDMServer, deleteMDMServer, listMDMServers, createMDMServer, getDeviceById, getDeviceByDeviceName, removeDeviceFromGroup, getMdmServerById, listMagicGroupConditions, createMagicGroupCondition, updateMagicGroupCondition, deleteMagicGroupCondition, listDepartments, listLocations, listOrgRoles, createDepartment, updateDepartment, deleteDepartment, createLocation, updateLocation, deleteLocation, createOrgRole, updateOrgRole, deleteOrgRole, getDepartmentById, getLocationById, getOrgRoleById, evaluateMagicGroupsForUser, evaluateMagicGroupsForGroup, revokeGroupAppAccess, getGroupAppAccessByGroupIdAndAppId, getGroupAppAccess, searchResourceCollections } from "../functions.ts";
 import { requireAuth, requireRole } from "../webfunctions.ts";
 
 router.use(express.json());
@@ -16,6 +16,31 @@ router.get("/users", requireAuth({ redirectTo: "/auth/signin" }), requireRole("A
     var users = await listTenantUsers({ tenantId: req.auth.tenantId })
     //console.log("found users");
     res.json(users);
+});
+
+router.get("/search", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    if (!query) {
+        res.status(400).json({ error: "Query parameter 'q' is required" });
+        return;
+    }
+    try {
+        const tenantId = req.auth.tenantId;
+        const [users, groups, domains, apps, departments, locations, orgRoles, devices, mdmServers] = await Promise.all([
+            listTenantUsers({ tenantId }),
+            listGroups({ tenantId }),
+            listDomains({ tenantId }),
+            listTenantApps({ tenantId, hideAutohidden: true }),
+            listDepartments({ tenantId }),
+            listLocations({ tenantId }),
+            listOrgRoles(),
+            listDevices({ tenantId }),
+            listMDMServers({ tenantId }),
+        ]);
+        res.json(searchResourceCollections({ users, groups, domains, apps, departments, locations, orgRoles, devices, mdmServers }, query));
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
 });
 
 router.get("/user/:id/get", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
