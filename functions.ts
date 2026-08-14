@@ -203,6 +203,7 @@ export async function createUser({
     departmentIds,
     orgRoleIds,
     tags,
+    groupIds,
 }: {
     email: string;
     password: string;
@@ -215,6 +216,7 @@ export async function createUser({
     departmentIds?: string[];
     orgRoleIds?: string[];
     tags?: string[];
+    groupIds?: string[];
 }) {
     if (!tenantId) {
         throw new Error("Tenant is required");
@@ -227,6 +229,30 @@ export async function createUser({
     });
     if (users.length > 0) {
         throw new Error("User already exists");
+    }
+    const uniqueGroupIds = [...new Set((groupIds ?? []).filter(Boolean))];
+    if (uniqueGroupIds.length > 0) {
+        if (!tenantId) {
+            throw new Error("Groups can only be assigned to tenant users");
+        }
+        const groups = await prisma.group.findMany({
+            where: {
+                id: {
+                    in: uniqueGroupIds,
+                },
+                tenantId,
+            },
+            select: {
+                id: true,
+                type: true,
+            },
+        });
+        if (groups.length !== uniqueGroupIds.length) {
+            throw new Error("One or more groups were not found in this tenant");
+        }
+        if (groups.some((group) => group.type === GroupType.Magic)) {
+            throw new Error("Users cannot be manually added to magic groups");
+        }
     }
     const user = await prisma.user.create({
         data: {
@@ -247,9 +273,78 @@ export async function createUser({
     if (orgRoleIds && orgRoleIds.length > 0) {
         await syncUserOrgRoles(user.id, orgRoleIds);
     }
+    if (uniqueGroupIds.length > 0) {
+        await prisma.groupUser.createMany({
+            data: uniqueGroupIds.map((groupId) => ({
+                userId: user.id,
+                groupId,
+            })),
+            skipDuplicates: true,
+        });
+    }
+    if (uniqueGroupIds.length > 0) {
+        await syncAppSessionsForUser({ userId: user.id });
+    }
     await syncAutoApps();
     await evaluateMagicGroupsForUser({ userId: user.id });
     return user;
+}
+
+export async function deleteUser({ id, tenantId }: { id: string; tenantId?: string }) {
+    const user = await prisma.user.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            tenantId: true,
+        },
+    });
+    if (!user) {
+        throw new Error("User not found");
+    }
+    if (tenantId && user.tenantId !== tenantId) {
+        throw new Error("User does not belong to this tenant");
+    }
+
+    const enrolledDeviceCount = await prisma.device.count({
+        where: { enrolledById: id },
+    });
+    if (enrolledDeviceCount > 0) {
+        throw new Error("User cannot be deleted while they own enrolled devices");
+    }
+
+    return prisma.$transaction(async (transaction) => {
+        await transaction.user.updateMany({
+            where: { managerId: id },
+            data: { managerId: null },
+        });
+        await transaction.device.updateMany({
+            where: { assignedTo: id },
+            data: { assignedTo: null },
+        });
+        await transaction.domain.updateMany({
+            where: { creatorId: id },
+            data: { creatorId: null },
+        });
+        await transaction.departmentUser.deleteMany({
+            where: { userId: id },
+        });
+        await transaction.orgRoleUser.deleteMany({
+            where: { userId: id },
+        });
+        await transaction.groupUser.deleteMany({
+            where: { userId: id },
+        });
+        await transaction.session.deleteMany({
+            where: { userId: id },
+        });
+        await transaction.userAppAccess.deleteMany({
+            where: { userId: id },
+        });
+        return transaction.user.delete({
+            where: { id },
+            omit: { password: true },
+        });
+    });
 }
 
 export function SetUserPassword({ userId, password }: { userId: string, password: string }) {
@@ -907,11 +1002,34 @@ export function updateApp({ id, name, description, logo, allowedURLs, mainUrl, a
     });
 }
 
-export function deleteApp({ id }: { id: string }) {
-    return prisma.app.delete({
-        where: {
-            id,
+export async function deleteApp({ id, tenantId }: { id: string; tenantId?: string }) {
+    const app = await prisma.app.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            tenantId: true,
         },
+    });
+    if (!app) {
+        throw new Error("App not found");
+    }
+    if (tenantId && app.tenantId !== tenantId) {
+        throw new Error("App does not belong to this tenant");
+    }
+
+    return prisma.$transaction(async (transaction) => {
+        await transaction.externalAppAccess.deleteMany({
+            where: { appId: id },
+        });
+        await transaction.userAppAccess.deleteMany({
+            where: { appId: id },
+        });
+        await transaction.groupAppAccess.deleteMany({
+            where: { appId: id },
+        });
+        return transaction.app.delete({
+            where: { id },
+        });
     });
 }
 
@@ -1324,11 +1442,39 @@ export async function createDomain({ name, creatorId, tenantId }: { name: string
     });
 }
 
-export async function deleteDomain({ id }: { id: string }) {
-    return await prisma.domain.delete({
-        where: {
-            id,
+export async function deleteDomain({ id, tenantId }: { id: string; tenantId?: string }) {
+    const domain = await prisma.domain.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            tenantId: true,
         },
+    });
+    if (!domain) {
+        throw new Error("Domain not found");
+    }
+    if (tenantId && domain.tenantId !== tenantId) {
+        throw new Error("Domain does not belong to this tenant");
+    }
+
+    const users = await prisma.user.findMany({
+        where: { domainId: id },
+        select: {
+            id: true,
+            username: true,
+            name: true,
+            email: true,
+        },
+        orderBy: { username: "asc" },
+    });
+    if (users.length > 0) {
+        const error = new Error("Domain cannot be deleted while users are assigned to it") as Error & { users: typeof users };
+        error.users = users;
+        throw error;
+    }
+
+    return prisma.domain.delete({
+        where: { id },
     });
 }
 
@@ -1577,18 +1723,54 @@ export async function listGroups({ tenantId }: { tenantId: string }) {
     });
 }
 
-export async function createGroup({ tenantId, name, description, groupname, createdBy, adminCreated, type }: { tenantId: string, name: string, description?: string, groupname: string, createdBy: string, adminCreated: boolean, type: GroupType }) {
-    return await prisma.group.create({
-        data: {
-            name,
-            groupname,
-            description,
-            tenantId,
-            adminCreated,
-            createdBy,
-            type,
-        },
+export async function createGroup({ tenantId, name, description, groupname, createdBy, adminCreated, type, userIds }: { tenantId: string, name: string, description?: string, groupname: string, createdBy: string, adminCreated: boolean, type: GroupType, userIds?: string[] }) {
+    const uniqueUserIds = [...new Set((userIds ?? []).filter(Boolean))];
+    if (uniqueUserIds.length > 0) {
+        if (type === GroupType.Magic) {
+            throw new Error("Users cannot be manually added to magic groups");
+        }
+        const users = await prisma.user.findMany({
+            where: {
+                id: {
+                    in: uniqueUserIds,
+                },
+                tenantId,
+            },
+            select: {
+                id: true,
+            },
+        });
+        if (users.length !== uniqueUserIds.length) {
+            throw new Error("One or more users were not found in this tenant");
+        }
+    }
+
+    const group = await prisma.$transaction(async (transaction) => {
+        const createdGroup = await transaction.group.create({
+            data: {
+                name,
+                groupname,
+                description,
+                tenantId,
+                adminCreated,
+                createdBy,
+                type,
+            },
+        });
+        if (uniqueUserIds.length > 0) {
+            await transaction.groupUser.createMany({
+                data: uniqueUserIds.map((userId) => ({
+                    userId,
+                    groupId: createdGroup.id,
+                })),
+                skipDuplicates: true,
+            });
+        }
+        return createdGroup;
     });
+
+    await Promise.all(uniqueUserIds.map((userId) => syncAppSessionsForUser({ userId })));
+    return group;
 }
 
 export async function updateGroup({ id, name, description, groupname, type }: { id: string, name: string, description?: string, groupname: string, type?: GroupType }) {
@@ -1618,11 +1800,37 @@ export async function updateGroup({ id, name, description, groupname, type }: { 
     });
 }
 
-export async function deleteGroup({ id }: { id: string }) {
-    return await prisma.group.delete({
-        where: {
-            id,
+export async function deleteGroup({ id, tenantId }: { id: string; tenantId?: string }) {
+    const group = await prisma.group.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            tenantId: true,
         },
+    });
+    if (!group) {
+        throw new Error("Group not found");
+    }
+    if (tenantId && group.tenantId !== tenantId) {
+        throw new Error("Group does not belong to this tenant");
+    }
+
+    return prisma.$transaction(async (transaction) => {
+        await transaction.magicGroupCondition.deleteMany({
+            where: { groupId: id },
+        });
+        await transaction.groupUser.deleteMany({
+            where: { groupId: id },
+        });
+        await transaction.deviceGroup.deleteMany({
+            where: { groupId: id },
+        });
+        await transaction.groupAppAccess.deleteMany({
+            where: { groupId: id },
+        });
+        return transaction.group.delete({
+            where: { id },
+        });
     });
 }
 
@@ -1689,15 +1897,13 @@ export async function deleteDepartment({ id, tenantId }: { id: string, tenantId:
     if (!department || department.tenantId !== tenantId) {
         throw new Error("Department not found");
     }
-    await prisma.departmentUser.deleteMany({
-        where: {
-            departmentId: id,
-        },
-    });
-    return await prisma.department.delete({
-        where: {
-            id,
-        },
+    return prisma.$transaction(async (transaction) => {
+        await transaction.departmentUser.deleteMany({
+            where: { departmentId: id },
+        });
+        return transaction.department.delete({
+            where: { id },
+        });
     });
 }
 
@@ -1782,26 +1988,18 @@ export async function deleteLocation({ id, tenantId }: { id: string, tenantId: s
     if (!location || location.tenantId !== tenantId) {
         throw new Error("Location not found");
     }
-    await prisma.user.updateMany({
-        where: {
-            locationId: id,
-        },
-        data: {
-            locationId: null,
-        },
-    });
-    await prisma.device.updateMany({
-        where: {
-            locationId: id,
-        },
-        data: {
-            locationId: null,
-        },
-    });
-    return await prisma.location.delete({
-        where: {
-            id,
-        },
+    return prisma.$transaction(async (transaction) => {
+        await transaction.user.updateMany({
+            where: { locationId: id },
+            data: { locationId: null },
+        });
+        await transaction.device.updateMany({
+            where: { locationId: id },
+            data: { locationId: null },
+        });
+        return transaction.location.delete({
+            where: { id },
+        });
     });
 }
 
@@ -1873,15 +2071,13 @@ export async function updateOrgRole({ id, name, description }: { id: string, nam
 }
 
 export async function deleteOrgRole({ id }: { id: string }) {
-    await prisma.orgRoleUser.deleteMany({
-        where: {
-            orgRoleId: id,
-        },
-    });
-    return await prisma.orgRole.delete({
-        where: {
-            id,
-        },
+    return prisma.$transaction(async (transaction) => {
+        await transaction.orgRoleUser.deleteMany({
+            where: { orgRoleId: id },
+        });
+        return transaction.orgRole.delete({
+            where: { id },
+        });
     });
 }
 
@@ -2133,13 +2329,50 @@ export async function AddTenantToApp({ tenantId, appId }: { tenantId: string, ap
 }
 
 export async function RemoveTenantFromApp({ tenantId, appId }: { tenantId: string, appId: string }) {
-    return await prisma.externalAppAccess.delete({
+    const app = await prisma.app.findUnique({
+        where: { id: appId },
+        select: {
+            id: true,
+            tenantId: true,
+        },
+    });
+    if (!app) {
+        throw new Error("App not found");
+    }
+    if (app.tenantId === tenantId) {
+        throw new Error("The app belongs to this tenant and cannot be removed as an acquired app");
+    }
+
+    const access = await prisma.externalAppAccess.findUnique({
         where: {
             appId_tenantId: {
                 appId,
                 tenantId,
             },
         },
+    });
+    if (!access) {
+        throw new Error("The app is not acquired by this tenant");
+    }
+
+    return prisma.$transaction(async (transaction) => {
+        await transaction.userAppAccess.deleteMany({
+            where: {
+                appId,
+                user: { tenantId },
+            },
+        });
+        await transaction.groupAppAccess.deleteMany({
+            where: {
+                appId,
+                group: { tenantId },
+            },
+        });
+        return transaction.externalAppAccess.delete({
+            where: {
+                appId_tenantId: { appId, tenantId },
+            },
+        });
     });
 }
 
@@ -2444,11 +2677,28 @@ export async function updateDevice({ id, name, hardwareType, softwareType, os, o
     return updatedDevice;
 }
 
-export async function deleteDevice({ id }: { id: string }) {
-    return await prisma.device.delete({
-        where: {
-            id,
+export async function deleteDevice({ id, tenantId }: { id: string; tenantId?: string }) {
+    const device = await prisma.device.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            tenantId: true,
         },
+    });
+    if (!device) {
+        throw new Error("Device not found");
+    }
+    if (tenantId && device.tenantId !== tenantId) {
+        throw new Error("Device does not belong to this tenant");
+    }
+
+    return prisma.$transaction(async (transaction) => {
+        await transaction.deviceGroup.deleteMany({
+            where: { deviceId: id },
+        });
+        return transaction.device.delete({
+            where: { id },
+        });
     });
 }
 
@@ -2826,11 +3076,29 @@ export async function updateMDMServer({ id, name, tenantId, url, enrollmentToken
     });
 }
 
-export async function deleteMDMServer({ id }: { id: string }) {
-    return await prisma.mdmServer.delete({
-        where: {
-            id,
+export async function deleteMDMServer({ id, tenantId }: { id: string; tenantId?: string }) {
+    const mdmServer = await prisma.mdmServer.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            tenantId: true,
         },
+    });
+    if (!mdmServer) {
+        throw new Error("MDM server not found");
+    }
+    if (tenantId && mdmServer.tenantId !== tenantId) {
+        throw new Error("MDM server does not belong to this tenant");
+    }
+
+    return prisma.$transaction(async (transaction) => {
+        await transaction.device.updateMany({
+            where: { mdmServerId: id },
+            data: { mdmServerId: null },
+        });
+        return transaction.mdmServer.delete({
+            where: { id },
+        });
     });
 }
 
@@ -2902,6 +3170,15 @@ function parseMagicGroupStatus(value: string) {
     return null;
 }
 
+type MagicGroupUserDetails = {
+    email?: string | null;
+    disabled?: boolean;
+    tags?: string[];
+    departments?: Array<{ department: { name: string } }>;
+    orgRoles?: Array<{ orgRole: { name: string } }>;
+    location?: { name: string } | null;
+};
+
 function matchesMagicGroupString(
     actual: string,
     expected: string,
@@ -2952,7 +3229,7 @@ function matchesMagicGroupStringList(
     }
 }
 
-function matchesMagicGroupCondition(user: Awaited<ReturnType<typeof getUserById>>, condition: {
+function matchesMagicGroupCondition(user: MagicGroupUserDetails | null | undefined, condition: {
     attribute: MagicGroupConditionAttributeType;
     operator: MagicGroupConditionOperatorType;
     value: string;
@@ -3008,6 +3285,130 @@ function matchesMagicGroupCondition(user: Awaited<ReturnType<typeof getUserById>
     }
 }
 
+function groupIncludesUser(group: {
+    includeAll: MagicGroupConditionTargetType | null;
+    conditions: Array<{
+        targetType: MagicGroupConditionTargetType;
+        attribute: MagicGroupConditionAttributeType;
+        operator: MagicGroupConditionOperatorType;
+        value: string;
+    }>;
+}, user: MagicGroupUserDetails) {
+    const userConditions = group.conditions.filter(
+        (condition) =>
+            condition.targetType === MagicGroupConditionTargetType.User ||
+            condition.targetType === MagicGroupConditionTargetType.Both,
+    );
+    return group.includeAll === MagicGroupConditionTargetType.User ||
+        group.includeAll === MagicGroupConditionTargetType.Both ||
+        (userConditions.length > 0 && userConditions.every((condition) => matchesMagicGroupCondition(user, condition)));
+}
+
+export async function previewMagicGroupsForUserDetails({
+    tenantId,
+    email,
+    departmentIds,
+    departments,
+    orgRoleIds,
+    orgRoles,
+    tags,
+    disabled,
+    status,
+    locationId,
+    location,
+}: {
+    tenantId: string;
+    email?: string;
+    departmentIds?: string[];
+    departments?: string[];
+    orgRoleIds?: string[];
+    orgRoles?: string[];
+    tags?: string[];
+    disabled?: boolean;
+    status?: boolean | string;
+    locationId?: string | null;
+    location?: string | null;
+}) {
+    if (!tenantId) {
+        throw new Error("Tenant is required");
+    }
+
+    const uniqueDepartmentIds = [...new Set((departmentIds ?? []).filter(Boolean))];
+    const uniqueOrgRoleIds = [...new Set((orgRoleIds ?? []).filter(Boolean))];
+    const [departmentRecords, orgRoleRecords, locationRecord, groups] = await Promise.all([
+        uniqueDepartmentIds.length > 0
+            ? prisma.department.findMany({
+                where: {
+                    id: { in: uniqueDepartmentIds },
+                    tenantId,
+                },
+                select: { name: true },
+            })
+            : Promise.resolve([]),
+        uniqueOrgRoleIds.length > 0
+            ? prisma.orgRole.findMany({
+                where: { id: { in: uniqueOrgRoleIds } },
+                select: { name: true },
+            })
+            : Promise.resolve([]),
+        locationId
+            ? prisma.location.findFirst({
+                where: { id: locationId, tenantId },
+                select: { name: true },
+            })
+            : Promise.resolve(null),
+        prisma.group.findMany({
+            where: {
+                tenantId,
+                type: GroupType.Magic,
+            },
+            include: {
+                conditions: true,
+            },
+        }),
+    ]);
+
+    if (departmentRecords.length !== uniqueDepartmentIds.length) {
+        throw new Error("One or more departments were not found in this tenant");
+    }
+    if (orgRoleRecords.length !== uniqueOrgRoleIds.length) {
+        throw new Error("One or more org roles were not found");
+    }
+    if (locationId && !locationRecord) {
+        throw new Error("Location not found in this tenant");
+    }
+
+    let resolvedDisabled = disabled ?? false;
+    if (status !== undefined) {
+        if (typeof status === "boolean") {
+            resolvedDisabled = !status;
+        } else {
+            const parsedStatus = parseMagicGroupStatus(status);
+            if (parsedStatus === null) {
+                throw new Error("Status must be active or disabled");
+            }
+            resolvedDisabled = !parsedStatus;
+        }
+    }
+
+    const user: MagicGroupUserDetails = {
+        email,
+        disabled: resolvedDisabled,
+        tags: tags ?? [],
+        departments: [
+            ...(departments ?? []).map((name) => ({ department: { name } })),
+            ...departmentRecords.map((department) => ({ department })),
+        ],
+        orgRoles: [
+            ...(orgRoles ?? []).map((name) => ({ orgRole: { name } })),
+            ...orgRoleRecords.map((orgRole) => ({ orgRole })),
+        ],
+        location: locationRecord ?? (location ? { name: location } : null),
+    };
+
+    return groups.filter((group) => groupIncludesUser(group, user));
+}
+
 export async function evaluateMagicGroupsForUser({ userId }: { userId: string }) {
     const user = await getUserById({id: userId})
     if (!user) {
@@ -3016,6 +3417,7 @@ export async function evaluateMagicGroupsForUser({ userId }: { userId: string })
 
     const groups = await prisma.group.findMany({
         where: {
+            tenantId: user.tenantId ?? undefined,
             type: GroupType.Magic,
         },
         include: {
@@ -3023,16 +3425,7 @@ export async function evaluateMagicGroupsForUser({ userId }: { userId: string })
         }
     })
     for (const group of groups) {
-        const relevantConditions = group.conditions.filter(
-            (condition) =>
-                condition.targetType === MagicGroupConditionTargetType.User ||
-                condition.targetType === MagicGroupConditionTargetType.Both,
-        );
-        const shouldBeMember =
-            group.includeAll === MagicGroupConditionTargetType.User ||
-            group.includeAll === MagicGroupConditionTargetType.Both ||
-            (relevantConditions.length > 0 &&
-                relevantConditions.every((condition) => matchesMagicGroupCondition(user, condition)));
+        const shouldBeMember = groupIncludesUser(group, user);
         const isMember = user.groups.some((userGroup) => userGroup.groupId === group.id);
 
         if (shouldBeMember && !isMember) {

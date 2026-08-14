@@ -324,7 +324,7 @@ router.get("/publicapp/:appid", async (req: any, res: any) => {
 
 router.post("/createGroup", requireAuth({ redirectTo: "/auth/signin" }), async (req: any, res: any) => {
     try {
-        var group = await createGroup({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), createdBy: req.auth.id, adminCreated: false, type: "Functional" });
+        var group = await createGroup({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), createdBy: req.auth.id, adminCreated: false, type: "Functional", userIds: req.body.userIds });
         res.json(group);
     } catch (e) {
         //console.log(e);
