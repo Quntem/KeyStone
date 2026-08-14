@@ -1,5 +1,5 @@
 import express from "express";
-import { addUserToGroup, createGroup, getAppSessionById, getAppSessionToken, getTenantById, listDepartments, listDevices, listDomains, listGroups, listLocations, listMDMServers, listOrgRoles, listTenantApps, listTenantUsers } from "../functions.ts";
+import { createGroup, getAppSessionById, getAppSessionToken, getTenantById, listDepartments, listDevices, listDomains, listGroups, listLocations, listMDMServers, listOrgRoles, listTenantApps, listTenantUsers } from "../functions.ts";
 import { appAuth, requireAuth } from "../webfunctions.ts";
 import cors from "cors";
 import type { app as AppType } from "../generated/prisma/index.js";
@@ -58,9 +58,8 @@ router.post("/createGroup", requireAuth({ redirectTo: "/auth/signin" }), express
         return;
     }
     try {
-        var group = await createGroup({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), createdBy: req.auth.id, adminCreated: false, type: "Functional" });
-        var newgroup = await addUserToGroup({ groupId: group.id, userId: req.auth.id });
-        res.json(newgroup);
+        var group = await createGroup({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), createdBy: req.auth.id, adminCreated: false, type: "Functional", userIds: [...new Set([req.auth.id, ...(req.body.userIds || [])])] });
+        res.json(group);
     } catch (e) {
         //console.log(e);
         res.status(400).json({ error: e.message });

@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 var router = express.Router();
 
-import { listTenantUsers, getUserById, listChildTenants, createUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, grantGroupAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, getTenantById, setTenantGroupCreationPermition, listDevices, createDevice, updateDevice, deleteDevice, addDeviceToGroup, updateMDMServer, deleteMDMServer, listMDMServers, createMDMServer, getDeviceById, getDeviceByDeviceName, removeDeviceFromGroup, getMdmServerById, listMagicGroupConditions, createMagicGroupCondition, updateMagicGroupCondition, deleteMagicGroupCondition, listDepartments, listLocations, listOrgRoles, createDepartment, updateDepartment, deleteDepartment, createLocation, updateLocation, deleteLocation, createOrgRole, updateOrgRole, deleteOrgRole, getDepartmentById, getLocationById, getOrgRoleById, evaluateMagicGroupsForUser, evaluateMagicGroupsForGroup, revokeGroupAppAccess, getGroupAppAccessByGroupIdAndAppId, getGroupAppAccess, searchResourceCollections } from "../functions.ts";
+import { listTenantUsers, getUserById, listChildTenants, createUser, deleteUser, setUserDisabled, setTenantLogo, setTenantDescription, setTenantColorContrast, setTenantColor, listTenantApps, createApp, updateApp, deleteApp, grantUserAppAccess, grantGroupAppAccess, getUserIdByUsername, revokeUserAppAccess, getUserAppAccess, updateUser, SetUserPassword, verifyDomain, listDomains, deleteDomain, createDomain, listGroups, createGroup, deleteGroup, updateGroup, addUserToGroup, removeUserFromGroup, setTenantDisplayName, AddTenantToApp, RemoveTenantFromApp, getAppById, UpgradeToFullTenant, getGroupById, getDomainById, getTenantById, setTenantGroupCreationPermition, listDevices, createDevice, updateDevice, deleteDevice, addDeviceToGroup, updateMDMServer, deleteMDMServer, listMDMServers, createMDMServer, getDeviceById, getDeviceByDeviceName, removeDeviceFromGroup, getMdmServerById, listMagicGroupConditions, createMagicGroupCondition, updateMagicGroupCondition, deleteMagicGroupCondition, listDepartments, listLocations, listOrgRoles, createDepartment, updateDepartment, deleteDepartment, createLocation, updateLocation, createOrgRole, updateOrgRole, deleteOrgRole, getDepartmentById, getLocationById, getOrgRoleById, evaluateMagicGroupsForUser, evaluateMagicGroupsForGroup, previewMagicGroupsForUserDetails, revokeGroupAppAccess, getGroupAppAccessByGroupIdAndAppId, getGroupAppAccess, searchResourceCollections } from "../functions.ts";
 import { requireAuth, requireRole } from "../webfunctions.ts";
 
 router.use(express.json());
@@ -48,6 +48,27 @@ router.get("/user/:id/get", requireAuth({ redirectTo: "/auth/signin" }), require
     res.json(user);
 });
 
+router.post("/magic-groups/preview", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        const groups = await previewMagicGroupsForUserDetails({
+            tenantId: req.auth.tenantId,
+            email: req.body.email,
+            departmentIds: req.body.departmentIds,
+            departments: req.body.departments,
+            orgRoleIds: req.body.orgRoleIds,
+            orgRoles: req.body.orgRoles,
+            tags: req.body.tags,
+            disabled: req.body.disabled,
+            status: req.body.status,
+            locationId: req.body.locationId,
+            location: req.body.location,
+        });
+        res.json(groups);
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
 router.get("/tenants", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     var users = await listChildTenants({ tenantId: req.auth.tenantId })
     //console.log("found users");
@@ -69,6 +90,15 @@ router.post("/user/:id/setdisabled", requireAuth({ redirectTo: "/auth/signin" })
         res.json({ success: true });
     } catch (e) {
         //console.log(e);
+        res.status(400).json({ error: e.message });
+    }
+});
+
+router.delete("/user/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        await deleteUser({ id: req.params.id, tenantId: req.auth.tenantId });
+        res.json({ success: true });
+    } catch (e) {
         res.status(400).json({ error: e.message });
     }
 });
@@ -97,6 +127,7 @@ router.post("/user", requireAuth({ redirectTo: "/auth/signin" }), requireRole("A
             departmentIds: req.body.departmentIds,
             orgRoleIds: req.body.orgRoleIds,
             tags: req.body.tags,
+            groupIds: req.body.groupIds,
         });
         await evaluateMagicGroupsForUser({ userId: user.id });
         res.json(user);
@@ -247,7 +278,7 @@ router.get("/app/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole(
 
 router.delete("/app/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        await deleteApp({ id: req.params.id });
+        await deleteApp({ id: req.params.id, tenantId: req.auth.tenantId });
         res.json({ success: true });
     } catch (e) {
         //console.log(e);
@@ -377,10 +408,13 @@ router.post("/domain", requireAuth({ redirectTo: "/auth/signin" }), requireRole(
 
 router.delete("/domain/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        await deleteDomain({ id: req.params.id });
+        await deleteDomain({ id: req.params.id, tenantId: req.auth.tenantId });
         res.json({ success: true });
     } catch (e) {
-        //console.log(e);
+        if (e?.users) {
+            res.status(409).json({ error: e.message, users: e.users });
+            return;
+        }
         res.status(400).json({ error: e.message });
     }
 });
@@ -591,7 +625,7 @@ router.post("/group/:id/recalculate", requireAuth({ redirectTo: "/auth/signin" }
 
 router.post("/group", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        var group = await createGroup({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), createdBy: req.auth.id, adminCreated: true, type: req.body.type || "Organizational" });
+        var group = await createGroup({ tenantId: req.auth.tenantId, name: req.body.name, description: req.body.description, groupname: req.body.groupname.trim().toLowerCase().replaceAll(/[^a-z0-9-_]/g, ""), createdBy: req.auth.id, adminCreated: true, type: req.body.type || "Organizational", userIds: req.body.userIds });
         res.json(group);
     } catch (e) {
         //console.log(e);
@@ -601,7 +635,7 @@ router.post("/group", requireAuth({ redirectTo: "/auth/signin" }), requireRole("
 
 router.delete("/group/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        await deleteGroup({ id: req.params.id });
+        await deleteGroup({ id: req.params.id, tenantId: req.auth.tenantId });
         res.json({ success: true });
     } catch (e) {
         //console.log(e);
@@ -713,6 +747,15 @@ router.post("/acquireapp/:id", requireAuth({ redirectTo: "/auth/signin" }), requ
     }
 });
 
+router.delete("/acquireapp/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
+    try {
+        await RemoveTenantFromApp({ tenantId: req.auth.tenantId, appId: req.params.id });
+        res.json({ success: true });
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
 router.post("/upgradetofulltenant", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
         const domain = req.body.domain;
@@ -785,7 +828,7 @@ router.get("/device/devicename/:name", requireAuth({ redirectTo: "/auth/signin" 
 
 router.delete("/device/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        var device = await deleteDevice({ id: req.params.id });
+        var device = await deleteDevice({ id: req.params.id, tenantId: req.auth.tenantId });
         res.json(device);
     } catch (e) {
         //console.log(e);
@@ -813,7 +856,7 @@ router.post("/mdmserver/:id", requireAuth({ redirectTo: "/auth/signin" }), requi
 
 router.delete("/mdmserver/:id", requireAuth({ redirectTo: "/auth/signin" }), requireRole("ADMIN"), async (req: any, res: any) => {
     try {
-        var mdmServer = await deleteMDMServer({ id: req.params.id });
+        var mdmServer = await deleteMDMServer({ id: req.params.id, tenantId: req.auth.tenantId });
         res.json(mdmServer);
     } catch (e) {
         res.status(400).json({ error: e.message });
