@@ -1534,19 +1534,99 @@ function selectAppSessionUser() {
         name: true,
         email: true,
         role: true,
+        userAppAccess: {
+            include: {
+                app: {
+                    select: {
+                        id: true,
+                        name: true,
+                        logo: true,
+                        description: true,
+                        mainUrl: true,
+                    },
+                },
+            },
+        },
         groups: {
             include: {
-                group: true,
+                group: {
+                    include: {
+                        appAccess: {
+                            include: {
+                                app: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        logo: true,
+                                        description: true,
+                                        mainUrl: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             },
         },
         tenant: true,
     };
 }
 
+function normalizeUserAppAccess(user: any) {
+    if (!user) {
+        return user;
+    }
+
+    const accessesByAppId = new Map<string, any>();
+    for (const access of user.userAppAccess || []) {
+        accessesByAppId.set(access.appId, {
+            ...access,
+            accessType: "user",
+        });
+    }
+
+    for (const groupMembership of user.groups || []) {
+        for (const access of groupMembership.group?.appAccess || []) {
+            if (!accessesByAppId.has(access.appId)) {
+                accessesByAppId.set(access.appId, {
+                    ...access,
+                    id: access.id,
+                    userId: user.id,
+                    appId: access.appId,
+                    expiresAt: access.expiresAt,
+                    createdAt: access.createdAt,
+                    autoCreated: false,
+                    app: access.app,
+                    accessType: "group",
+                    group: (() => {
+                        const { appAccess, ...group } = groupMembership.group;
+                        return group;
+                    })(),
+                });
+            }
+        }
+    }
+
+    return {
+        ...user,
+        groups: (user.groups || []).map((groupMembership: any) => {
+            if (!groupMembership.group) {
+                return groupMembership;
+            }
+            const { appAccess, ...group } = groupMembership.group;
+            return {
+                ...groupMembership,
+                group,
+            };
+        }),
+        userAppAccess: Array.from(accessesByAppId.values()),
+    };
+}
+
 function normalizeAppSession(session: any) {
     const directAccessUser = session?.userAppAccess?.user;
     const fallbackUser = session?.session?.user;
-    const user = directAccessUser || fallbackUser;
+    const user = normalizeUserAppAccess(directAccessUser || fallbackUser);
     const access = session?.userAppAccess
         ? {
             ...session.userAppAccess,
