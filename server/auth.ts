@@ -288,7 +288,7 @@ router.post("/setupteam", express.json(), async (req: any, res: any) => {
 })
 
 router.post("/setuppersonal", express.json(), async (req: any, res: any) => {
-    var user = await createUser({ tenantId: undefined, username: req.body.email.replaceAll("@", "_").replaceAll(".", "_"), email: req.body.email, password: req.body.password, name: req.body.name, role: "USER", domainId: undefined });
+    var user = await createUser({ tenantId: undefined, username: req.body.email.replaceAll("@", "_").replaceAll(".", "_"), email: req.body.email, password: req.body.password, name: req.body.name, role: "ADMIN", domainId: undefined });
     var session = await createSession({ userId: user.id, password: req.body.password });
     res.cookie("sessionId", session.id, sessionCookieOptions);
     res.json({ success: true });
