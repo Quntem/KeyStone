@@ -4,6 +4,7 @@ import bodyParser from "body-parser";
 import { requireAuth } from "../webfunctions.ts";
 import isEmail from "is-email";
 import cors from "cors";
+import { personalUsernameFromEmail } from "../usernames.ts";
 
 var router = express.Router();
 
@@ -288,7 +289,7 @@ router.post("/setupteam", express.json(), async (req: any, res: any) => {
 })
 
 router.post("/setuppersonal", express.json(), async (req: any, res: any) => {
-    var user = await createUser({ tenantId: undefined, username: req.body.email.replaceAll("@", "_").replaceAll(".", "_"), email: req.body.email, password: req.body.password, name: req.body.name, role: "ADMIN", domainId: undefined });
+    var user = await createUser({ tenantId: undefined, username: personalUsernameFromEmail(req.body.email), email: req.body.email, password: req.body.password, name: req.body.name, role: "ADMIN", domainId: undefined });
     var session = await createSession({ userId: user.id, password: req.body.password });
     res.cookie("sessionId", session.id, sessionCookieOptions);
     res.json({ success: true });

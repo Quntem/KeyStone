@@ -219,11 +219,17 @@ export async function createUser({
     tags?: string[];
     groupIds?: string[];
 }) {
-    const usernameFilter = tenantUsernameFilter(tenantId, username);
+    let uniqueUsername = username;
+    const usernameFilter = tenantUsernameFilter(tenantId, uniqueUsername);
     if (usernameFilter) {
-        const users = await prisma.user.findMany({ where: usernameFilter });
-        if (users.length > 0) {
+        const existingUser = await prisma.user.findFirst({ where: usernameFilter, select: { id: true } });
+        if (existingUser) {
             throw new Error("User already exists");
+        }
+    } else {
+        let suffix = 1;
+        while (await prisma.user.findFirst({ where: { username: uniqueUsername }, select: { id: true } })) {
+            uniqueUsername = `${username}_${suffix++}`;
         }
     }
     const uniqueGroupIds = [...new Set((groupIds ?? []).filter(Boolean))];
@@ -311,7 +317,7 @@ export async function createUser({
             name,
             role: role == "ADMIN" ? Role.ADMIN : role == "USER" ? Role.USER : role == "SERVICE" ? Role.SERVICE : Role.USER,
             tenantId: tenantId ?? null,
-            username,
+            username: uniqueUsername,
             domainId,
             locationId: locationId || null,
             tags: tags ?? [],
