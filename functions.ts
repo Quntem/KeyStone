@@ -1,4 +1,5 @@
 import { AdminAutoMode, DeviceHardwareType, DeviceSoftwareType, GroupType, MagicGroupConditionAttributeType, MagicGroupConditionOperatorType, MagicGroupConditionTargetType, PrismaClient, Role, TenantType } from "./generated/prisma/index.js";
+import { tenantIdFilter } from "./tenant-scope.ts";
 import * as bcrypt from "bcrypt";
 import * as dns from "dns/promises";
 
@@ -218,12 +219,9 @@ export async function createUser({
     tags?: string[];
     groupIds?: string[];
 }) {
-    if (!tenantId) {
-        throw new Error("Tenant is required");
-    }
     var users = await prisma.user.findMany({
         where: {
-            tenantId,
+            ...tenantIdFilter(tenantId),
             username,
         },
     });
@@ -254,13 +252,67 @@ export async function createUser({
             throw new Error("Users cannot be manually added to magic groups");
         }
     }
+    if (domainId) {
+        if (!tenantId) {
+            throw new Error("Domains can only be assigned to tenant users");
+        }
+        const domain = await prisma.domain.findFirst({
+            where: {
+                id: domainId,
+                tenantId,
+            },
+            select: {
+                id: true,
+            },
+        });
+        if (!domain) {
+            throw new Error("Domain not found in this tenant");
+        }
+    }
+    if (locationId) {
+        if (!tenantId) {
+            throw new Error("Locations can only be assigned to tenant users");
+        }
+        const location = await prisma.location.findFirst({
+            where: {
+                id: locationId,
+                tenantId,
+            },
+            select: {
+                id: true,
+            },
+        });
+        if (!location) {
+            throw new Error("Location not found in this tenant");
+        }
+    }
+    const uniqueDepartmentIds = [...new Set((departmentIds ?? []).filter(Boolean))];
+    if (uniqueDepartmentIds.length > 0) {
+        if (!tenantId) {
+            throw new Error("Departments can only be assigned to tenant users");
+        }
+        const departments = await prisma.department.findMany({
+            where: {
+                id: {
+                    in: uniqueDepartmentIds,
+                },
+                tenantId,
+            },
+            select: {
+                id: true,
+            },
+        });
+        if (departments.length !== uniqueDepartmentIds.length) {
+            throw new Error("One or more departments were not found in this tenant");
+        }
+    }
     const user = await prisma.user.create({
         data: {
             email,
             password: hashPassword(password),
             name,
             role: role == "ADMIN" ? Role.ADMIN : role == "USER" ? Role.USER : role == "SERVICE" ? Role.SERVICE : Role.USER,
-            tenantId,
+            tenantId: tenantId ?? null,
             username,
             domainId,
             locationId: locationId || null,
@@ -433,12 +485,15 @@ export async function updateUser({
         }
     }
     if (departmentIds && departmentIds.length > 0) {
+        if (!existingUser.tenantId) {
+            throw new Error("Departments can only be assigned to tenant users");
+        }
         const departments = await prisma.department.findMany({
             where: {
                 id: {
                     in: [...new Set(departmentIds.filter(Boolean))],
                 },
-                tenantId: existingUser.tenantId ?? undefined,
+                tenantId: existingUser.tenantId,
             },
             select: {
                 id: true,
@@ -3495,15 +3550,17 @@ export async function evaluateMagicGroupsForUser({ userId }: { userId: string })
         return;
     }
 
-    const groups = await prisma.group.findMany({
-        where: {
-            tenantId: user.tenantId ?? undefined,
-            type: GroupType.Magic,
-        },
-        include: {
-            conditions: true,
-        }
-    })
+    const groups = user.tenantId
+        ? await prisma.group.findMany({
+            where: {
+                tenantId: user.tenantId,
+                type: GroupType.Magic,
+            },
+            include: {
+                conditions: true,
+            }
+        })
+        : [];
     for (const group of groups) {
         const shouldBeMember = groupIncludesUser(group, user);
         const isMember = user.groups.some((userGroup) => userGroup.groupId === group.id);
