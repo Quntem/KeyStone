@@ -1,5 +1,5 @@
 import { AdminAutoMode, DeviceHardwareType, DeviceSoftwareType, GroupType, MagicGroupConditionAttributeType, MagicGroupConditionOperatorType, MagicGroupConditionTargetType, PrismaClient, Role, TenantType } from "./generated/prisma/index.js";
-import { tenantIdFilter } from "./tenant-scope.ts";
+import { tenantUsernameFilter } from "./user-scope.ts";
 import * as bcrypt from "bcrypt";
 import * as dns from "dns/promises";
 
@@ -219,14 +219,12 @@ export async function createUser({
     tags?: string[];
     groupIds?: string[];
 }) {
-    var users = await prisma.user.findMany({
-        where: {
-            ...tenantIdFilter(tenantId),
-            username,
-        },
-    });
-    if (users.length > 0) {
-        throw new Error("User already exists");
+    const usernameFilter = tenantUsernameFilter(tenantId, username);
+    if (usernameFilter) {
+        const users = await prisma.user.findMany({ where: usernameFilter });
+        if (users.length > 0) {
+            throw new Error("User already exists");
+        }
     }
     const uniqueGroupIds = [...new Set((groupIds ?? []).filter(Boolean))];
     if (uniqueGroupIds.length > 0) {
