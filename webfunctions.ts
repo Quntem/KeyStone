@@ -1,12 +1,10 @@
 import express from "express";
 import { getAppById, getSession, getUserById } from "./functions.ts";
+import { hasRequiredRole } from "./authorization.ts";
 
 export function requireRole(role: string) {
     return (req: any, res: any, next: any) => {
-        if (!req.auth?.role) {
-            return res.status(401).json({ message: "Unauthorized" });
-        }
-        if (req.auth.role != role) {
+        if (!hasRequiredRole(req.auth, role)) {
             return res.status(401).json({ message: "Unauthorized" });
         }
         console.log("Role found");
