@@ -7,6 +7,7 @@ import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemMedia, 
 import { Separator } from "@/components/ui/separator";
 import { useGroupsList, useMDMServersList } from "@/lib/admin";
 import { useSession } from "@/lib/auth";
+import { buildSignInUrl } from "@/lib/signin-url";
 import { CheckIcon, ChevronRightIcon, CogIcon, CrownIcon, GroupIcon, Loader2Icon, PlayIcon, QrCodeIcon, ServerIcon, SettingsIcon, TextIcon, UserIcon, WifiIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,7 +26,7 @@ export default function DeviceManager() {
         if (session.data?.user?.id && session.loaded) {
             console.log(session.data);
         } else if (session.data?.error && session.loaded) {
-            window.location.href = process.env.NEXT_PUBLIC_API_URL + "/auth/signin?redirectTo=" + window.location.href;
+            window.location.href = buildSignInUrl(process.env.NEXT_PUBLIC_API_URL, window.location.href);
         }
     }, [session]);
     return (

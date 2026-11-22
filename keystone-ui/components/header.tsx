@@ -13,6 +13,7 @@ import { Launcher } from "./launcher";
 import { useTenant } from "@/lib/auth";
 import { DropdownMenuGroup } from "./ui/dropdown-menu";
 import Link from "next/link";
+import { buildSignInUrl } from "@/lib/signin-url";
 
 export const Header = ({ title }: { title: string }) => {
     const session = useSession();
@@ -26,7 +27,7 @@ export const Header = ({ title }: { title: string }) => {
         if (session.data?.user?.id && session.loaded) {
             console.log(session.data);
         } else if (session.data?.error && session.loaded) {
-            window.location.href = process.env.NEXT_PUBLIC_API_URL + "/auth/signin?redirectTo=" + window.location.href;
+            window.location.href = buildSignInUrl(process.env.NEXT_PUBLIC_API_URL, window.location.href);
         }
     }, [session]);
     if (tenant.data?.tenant?.type == "Team" && !path.startsWith("/account")) {
@@ -66,7 +67,7 @@ export const TeamHeader = ({ title }: { title: string }) => {
             console.log(session.data);
         } else if (session.data?.error) {
             if (session.loaded) {
-                window.location.href = process.env.NEXT_PUBLIC_API_URL + "/auth/signin?redirectTo=" + window.location.href;
+                window.location.href = buildSignInUrl(process.env.NEXT_PUBLIC_API_URL, window.location.href);
             }
         }
     }, [session]);
@@ -151,7 +152,7 @@ function HeaderUser() {
                     <UserItem user={session.data?.user} />
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="color-[var(--qu-text)]" onClick={() => { LogOut().then(() => { window.location.href = process.env.NEXT_PUBLIC_API_URL + "/auth/signin?redirectTo=" + window.location.href }) }}><LogOutIcon size={20} />Logout</DropdownMenuItem>
+                <DropdownMenuItem className="color-[var(--qu-text)]" onClick={() => { LogOut().then(() => { window.location.href = buildSignInUrl(process.env.NEXT_PUBLIC_API_URL, window.location.href) }) }}><LogOutIcon size={20} />Logout</DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     );
