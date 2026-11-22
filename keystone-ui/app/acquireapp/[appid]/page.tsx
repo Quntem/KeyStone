@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { usePublicApp } from "@/lib/auth";
 import { PlusIcon } from "lucide-react";
 import { useSession } from "@/lib/auth";
+import { buildSignInUrl } from "@/lib/signin-url";
 import { useEffect } from "react";
 import { useTenant } from "@/lib/auth";
 
@@ -12,7 +13,7 @@ export default function GetStartedPage({params}: {params: {appid: string}}) {
     const tenant = useTenant();
     useEffect(() => {
         if (session.data?.error) {
-            window.location.href = process.env.NEXT_PUBLIC_API_URL + "/auth/signin?redirectTo=" + window.location.href;
+            window.location.href = buildSignInUrl(process.env.NEXT_PUBLIC_API_URL, window.location.href);
         }
     }, [session]);
     const publicApp = usePublicApp(params.appid);

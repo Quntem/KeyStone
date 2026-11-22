@@ -5,6 +5,7 @@ import { requireAuth } from "../webfunctions.ts";
 import isEmail from "is-email";
 import cors from "cors";
 import { personalUsernameFromEmail } from "../usernames.ts";
+import { createSignInHandler } from "./signin.ts";
 
 var router = express.Router();
 
@@ -62,16 +63,11 @@ router.use(cors({
     origin: [process.env.FRONTEND_URL, process.env.FRONTEND_URL_2, process.env.FRONTEND_URL_3, process.env.FRONTEND_URL_4, process.env.FRONTEND_URL_5, process.env.FRONTEND_URL_6, process.env.FRONTEND_URL_7, process.env.FRONTEND_URL_8, process.env.FRONTEND_URL_9, process.env.FRONTEND_URL_10],
 }));
 
-router.get("/signin", async (req: any, res: any) => {
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
-    if (req.cookies?.sessionId) {
-        res.redirect(req.query.redirectTo || "/auth/ui/showsessiontoken");
-        return;
-    }
-    res.sendFile("./auth/signin.html", { root: process.cwd() + "/server/UI" });
-});
+router.get("/signin", createSignInHandler({
+    getSession,
+    sessionCookieOptions,
+    sendSignInPage: (res) => res.sendFile("./auth/signin.html", { root: process.cwd() + "/server/UI" }),
+}));
 
 router.get("/redirect", requireAuth({ redirectTo: "/auth/signin" }), async (req: any, res: any) => {
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
